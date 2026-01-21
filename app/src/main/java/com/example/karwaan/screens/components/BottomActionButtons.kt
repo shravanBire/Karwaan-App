@@ -13,7 +13,10 @@ import androidx.compose.ui.unit.dp
 
 @Composable
 fun BottomActionButtons(
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onRecenterClick: () -> Unit = {},
+    onDirectionsClick: () -> Unit = {},
+    onGroupTripClick: () -> Unit = {}
 ) {
     Row(
         modifier = modifier,
@@ -21,24 +24,33 @@ fun BottomActionButtons(
     ) {
 
         FloatingActionButton(
-            onClick = { },
+            onClick = onRecenterClick,
             shape = CircleShape
         ) {
-            Icon(Icons.Default.GpsFixed, contentDescription = "Recenter")
+            Icon(
+                imageVector = Icons.Default.GpsFixed,
+                contentDescription = "Recenter"
+            )
         }
 
         FloatingActionButton(
-            onClick = { },
+            onClick = onDirectionsClick,
             shape = CircleShape
         ) {
-            Icon(Icons.Default.Navigation, contentDescription = "Navigate")
+            Icon(
+                imageVector = Icons.Default.Navigation,
+                contentDescription = "Directions"
+            )
         }
 
         FloatingActionButton(
-            onClick = { },
+            onClick = onGroupTripClick,
             shape = CircleShape
         ) {
-            Icon(Icons.Default.Group, contentDescription = "Group Trip")
+            Icon(
+                imageVector = Icons.Default.Group,
+                contentDescription = "Group Trip"
+            )
         }
     }
 }
