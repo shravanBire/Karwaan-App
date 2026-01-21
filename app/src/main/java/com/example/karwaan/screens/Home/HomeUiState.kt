@@ -1,6 +1,7 @@
 package com.example.karwaan.screens.Home
 
 import com.example.karwaan.utils.SearchResult
+import com.example.karwaan.utils.UserLocation
 
 data class HomeUiState(
     val searchQuery: String = "",
@@ -11,6 +12,7 @@ data class HomeUiState(
 
     val startLocationQuery: String = "",
 
-    val hasLocationPermission: Boolean = false
+    val hasLocationPermission: Boolean = false,
+    val userLocation: UserLocation? = null
 )
 

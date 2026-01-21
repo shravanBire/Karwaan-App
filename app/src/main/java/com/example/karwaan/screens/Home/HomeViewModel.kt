@@ -18,6 +18,22 @@ class HomeViewModel : ViewModel() {
     fun onEvent(event: HomeEvent) {
         when (event) {
 
+            HomeEvent.OnGpsRecenterClicked -> {
+                // UI will request permission if needed
+            }
+
+            is HomeEvent.OnUserLocationUpdated -> {
+                _uiState.update {
+                    it.copy(userLocation = event.location)
+                }
+            }
+
+            is HomeEvent.OnLocationPermissionResult -> {
+                _uiState.update {
+                    it.copy(hasLocationPermission = event.granted)
+                }
+            }
+
             HomeEvent.OnSearchActivated -> {
                 _uiState.update {
                     it.copy(isSearching = true, searchQuery = "")

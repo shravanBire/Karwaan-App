@@ -6,6 +6,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import com.example.karwaan.utils.SearchResult
+import com.example.karwaan.utils.UserLocation
 import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.maps.MapLibreMap
@@ -16,11 +17,25 @@ import org.maplibre.android.maps.Style
 @Composable
 fun MapViewContainer(
     modifier: Modifier = Modifier,
-    searchedLocation: SearchResult?
+    searchedLocation: SearchResult?,
+    userLocation: UserLocation?
 ) {
     val context = LocalContext.current
     val mapView = remember { MapView(context) }
     var map by remember { mutableStateOf<MapLibreMap?>(null) }
+
+    LaunchedEffect(userLocation) {
+        userLocation?.let {
+            map?.animateCamera(
+                CameraUpdateFactory.newLatLngZoom(
+                    LatLng(it.latitude, it.longitude),
+                    15.5
+                ),
+                1000
+            )
+        }
+    }
+
 
     AndroidView(
         modifier = modifier,

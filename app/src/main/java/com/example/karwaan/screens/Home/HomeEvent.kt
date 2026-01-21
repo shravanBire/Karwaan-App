@@ -1,6 +1,16 @@
 package com.example.karwaan.screens.Home
 
+import com.example.karwaan.utils.UserLocation
+
 sealed class HomeEvent {
+
+    object OnGpsRecenterClicked : HomeEvent()
+
+
+    data class OnUserLocationUpdated(
+        val location: com.example.karwaan.utils.UserLocation
+    ) : HomeEvent()
+
 
     object OnSearchActivated : HomeEvent()
     data class OnSearchQueryChanged(val query: String) : HomeEvent()

@@ -10,11 +10,14 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.karwaan.screens.Home.HomeEvent
+import com.example.karwaan.screens.Home.HomeViewModel
 
 @Composable
 fun BottomActionButtons(
     modifier: Modifier = Modifier,
-    onRecenterClick: () -> Unit = {},
+    onRecenterClick: () -> Unit,
     onDirectionsClick: () -> Unit = {},
     onGroupTripClick: () -> Unit = {}
 ) {
@@ -27,30 +30,21 @@ fun BottomActionButtons(
             onClick = onRecenterClick,
             shape = CircleShape
         ) {
-            Icon(
-                imageVector = Icons.Default.GpsFixed,
-                contentDescription = "Recenter"
-            )
+            Icon(Icons.Default.GpsFixed, contentDescription = "Recenter")
         }
 
         FloatingActionButton(
             onClick = onDirectionsClick,
             shape = CircleShape
         ) {
-            Icon(
-                imageVector = Icons.Default.Navigation,
-                contentDescription = "Directions"
-            )
+            Icon(Icons.Default.Navigation, contentDescription = "Directions")
         }
 
         FloatingActionButton(
             onClick = onGroupTripClick,
             shape = CircleShape
         ) {
-            Icon(
-                imageVector = Icons.Default.Group,
-                contentDescription = "Group Trip"
-            )
+            Icon(Icons.Default.Group, contentDescription = "Group Trip")
         }
     }
 }
