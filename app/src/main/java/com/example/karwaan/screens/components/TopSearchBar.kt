@@ -43,22 +43,58 @@ fun TopSearchBar(
         }
     }
 
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable {
-                if (!isEditable) onActivate()
-            }
-    ) {
+    if (!isEditable) {
+        // 🔹 DISPLAY MODE (whole bar clickable)
+        Box(
+            modifier = modifier
+                .fillMaxWidth()
+                .clickable { onActivate() }
+        ) {
+            OutlinedTextField(
+                value = placeholder,
+                onValueChange = {},
+                modifier = Modifier.fillMaxWidth(),
+                enabled = false, // 🔑 KEY LINE
+                singleLine = true,
+
+                leadingIcon = {
+                    if (query.isNotBlank()) {
+                        IconButton(onClick = onClear) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Back"
+                            )
+                        }
+                    } else {
+                        Icon(
+                            Icons.Default.Search,
+                            contentDescription = "Search"
+                        )
+                    }
+                },
+
+
+                        shape = MaterialTheme.shapes.large,
+
+                colors = OutlinedTextFieldDefaults.colors(
+                    disabledContainerColor = Color(0xFFF1F3F4),
+                    disabledTextColor = Color.Black,
+                    disabledPlaceholderColor = Color(0xFF80868B),
+                    disabledLeadingIconColor = Color(0xFF80868B),
+                    disabledTrailingIconColor = Color(0xFF80868B),
+                    disabledBorderColor = Color.Transparent
+                )
+            )
+        }
+    } else {
+        // 🔹 EDIT MODE (real search input)
         OutlinedTextField(
             value = query,
             onValueChange = onQueryChange,
-            modifier = Modifier
+            modifier = modifier
                 .fillMaxWidth()
                 .focusRequester(focusRequester),
 
-
-            readOnly = !isEditable,
             singleLine = true,
             placeholder = { Text(placeholder) },
 
@@ -71,20 +107,13 @@ fun TopSearchBar(
             ),
 
             leadingIcon = {
-                if (isEditable || query.isNotBlank()) {
-                    IconButton(onClick = onClear) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, null)
-                    }
+                IconButton(onClick = onClear) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, null)
                 }
             },
 
             trailingIcon = {
-                IconButton(
-                    onClick = {
-                        if (!isEditable) onActivate()
-                        else onSearch()
-                    }
-                ) {
+                IconButton(onClick = onSearch) {
                     Icon(Icons.Default.Search, null)
                 }
             },
@@ -98,27 +127,23 @@ fun TopSearchBar(
                 focusedTextColor = Color.Black,
                 unfocusedTextColor = Color.Black,
 
-                focusedPlaceholderColor =
-                if (query.isBlank()) Color(0xFF80868B) else Color.Black,
-                unfocusedPlaceholderColor =
-                if (query.isBlank()) Color(0xFF80868B) else Color.Black,
+                focusedPlaceholderColor = Color(0xFF80868B),
+                unfocusedPlaceholderColor = Color(0xFF80868B),
 
-                focusedLeadingIconColor =
-                if (query.isBlank()) Color(0xFF80868B) else Color.Black,
-                unfocusedLeadingIconColor =
-                if (query.isBlank()) Color(0xFF80868B) else Color.Black,
+                focusedLeadingIconColor = Color.Black,
+                unfocusedLeadingIconColor = Color.Black,
 
-                focusedTrailingIconColor =
-                if (query.isBlank()) Color(0xFF80868B) else Color.Black,
-                unfocusedTrailingIconColor =
-                if (query.isBlank()) Color(0xFF80868B) else Color.Black,
+                focusedTrailingIconColor = Color.Black,
+                unfocusedTrailingIconColor = Color.Black,
 
                 focusedBorderColor = Color.Transparent,
                 unfocusedBorderColor = Color.Transparent,
+
                 cursorColor = Color.Black
             )
         )
     }
+
 
 
 }

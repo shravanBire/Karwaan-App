@@ -65,7 +65,8 @@ fun HomeScreen(
         MapViewContainer(
             modifier = Modifier.fillMaxSize(),
             searchedLocation = state.searchedLocation,
-            userLocation = state.userLocation
+            userLocation = state.userLocation,
+            recenterRequestId = state.recenterRequestId
         )
 
         // 🔍 TOP SEARCH BAR (ONLY ONE)
@@ -108,9 +109,8 @@ fun HomeScreen(
 
                 onRecenterClick = {
                     if (LocationPermissionHelper.hasLocationPermission(context)) {
-                        viewModel.onEvent(
-                            HomeEvent.OnLocationPermissionResult(true)
-                        )
+                        viewModel.onEvent(HomeEvent.OnLocationPermissionResult(true))
+                        viewModel.onEvent(HomeEvent.OnRecenterRequested)
                     } else {
                         permissionLauncher.launch(
                             android.Manifest.permission.ACCESS_FINE_LOCATION

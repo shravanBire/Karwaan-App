@@ -4,6 +4,9 @@ import com.example.karwaan.utils.UserLocation
 
 sealed class HomeEvent {
 
+    object OnRecenterRequested : HomeEvent()
+
+
     object OnGpsRecenterClicked : HomeEvent()
 
 

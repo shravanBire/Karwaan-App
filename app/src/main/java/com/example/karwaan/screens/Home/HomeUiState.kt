@@ -13,6 +13,8 @@ data class HomeUiState(
     val startLocationQuery: String = "",
 
     val hasLocationPermission: Boolean = false,
-    val userLocation: UserLocation? = null
+    val userLocation: UserLocation? = null,
+
+    val recenterRequestId: Int = 0
 )
 

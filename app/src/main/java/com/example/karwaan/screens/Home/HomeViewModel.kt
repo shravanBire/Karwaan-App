@@ -18,6 +18,12 @@ class HomeViewModel : ViewModel() {
     fun onEvent(event: HomeEvent) {
         when (event) {
 
+            is HomeEvent.OnRecenterRequested -> {
+                _uiState.update {
+                    it.copy(recenterRequestId = it.recenterRequestId + 1)
+                }
+            }
+
             HomeEvent.OnGpsRecenterClicked -> {
                 // UI will request permission if needed
             }

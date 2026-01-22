@@ -18,13 +18,14 @@ import org.maplibre.android.maps.Style
 fun MapViewContainer(
     modifier: Modifier = Modifier,
     searchedLocation: SearchResult?,
-    userLocation: UserLocation?
+    userLocation: UserLocation?,
+    recenterRequestId: Int
 ) {
     val context = LocalContext.current
     val mapView = remember { MapView(context) }
     var map by remember { mutableStateOf<MapLibreMap?>(null) }
 
-    LaunchedEffect(userLocation) {
+    LaunchedEffect(userLocation,  recenterRequestId) {
         userLocation?.let {
             map?.animateCamera(
                 CameraUpdateFactory.newLatLngZoom(
