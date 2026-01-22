@@ -1,6 +1,7 @@
 package com.example.karwaan.screens.Home
 
 import android.annotation.SuppressLint
+import android.os.Looper
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
@@ -19,6 +20,13 @@ import com.example.karwaan.utils.LocationPermissionHelper
 import com.example.karwaan.utils.UserLocation
 import com.google.android.gms.location.LocationServices
 
+import com.google.android.gms.location.LocationRequest
+import com.google.android.gms.location.LocationCallback
+import com.google.android.gms.location.LocationResult
+import com.google.android.gms.location.Priority
+
+
+@SuppressLint("MissingPermission")
 @Composable
 fun HomeScreen(
     viewModel: HomeViewModel = viewModel()
@@ -38,23 +46,63 @@ fun HomeScreen(
         LocationServices.getFusedLocationProviderClient(context)
     }
 
+
+    val locationCallback = remember {
+        object : LocationCallback() {
+            override fun onLocationResult(result: LocationResult) {
+                val location = result.lastLocation ?: return
+
+                viewModel.onEvent(
+                    HomeEvent.OnUserLocationUpdated(
+                        UserLocation(
+                            location.latitude,
+                            location.longitude
+                        )
+                    )
+                )
+            }
+        }
+    }
+
+
+    val locationRequest = remember {
+        LocationRequest.Builder(
+            Priority.PRIORITY_HIGH_ACCURACY,
+            2000L // update every 2 seconds
+        )
+            .setMinUpdateDistanceMeters(3f) // move 3 meters
+            .build()
+    }
+
     LaunchedEffect(state.hasLocationPermission) {
         if (
             state.hasLocationPermission &&
             LocationPermissionHelper.hasLocationPermission(context)
         ) {
-            fusedClient.getLastLocation()
-                .addOnSuccessListener { location ->
-                    location?.let {
-                        viewModel.onEvent(
-                            HomeEvent.OnUserLocationUpdated(
-                                UserLocation(it.latitude, it.longitude)
-                            )
-                        )
-                    }
-                }
+            fusedClient.removeLocationUpdates(locationCallback)
+
+            runCatching {
+                fusedClient.requestLocationUpdates(
+                    locationRequest,
+                    locationCallback,
+                    Looper.getMainLooper()
+                )
+            }.onFailure {
+                it.printStackTrace()
+            }
         }
     }
+
+
+    DisposableEffect(Unit) {
+        onDispose {
+            fusedClient.removeLocationUpdates(locationCallback)
+        }
+    }
+
+
+
+
 
 
 

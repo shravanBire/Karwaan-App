@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+    <vector xmlns:android="http://schemas.android.com/apk/res/android"
+        android:width="16dp"
+        android:height="16dp"
+        android:viewportWidth="16"
+        android:viewportHeight="16">
+
+        <!-- Outer glow -->
+        <path
+            android:fillColor="#552196F3"
+            android:pathData="M8,0 A8,8 0 1,1 7.999,0 Z"/>
+
+        <!-- Inner dot -->
+        <path
+            android:fillColor="#2196F3"
+            android:pathData="M8,3 A5,5 0 1,1 7.999,3 Z"/>
+    </vector>
