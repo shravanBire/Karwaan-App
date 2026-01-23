@@ -18,7 +18,6 @@ import com.example.karwaan.screens.Home.HomeViewModel
 fun BottomActionButtons(
     modifier: Modifier = Modifier,
     onRecenterClick: () -> Unit,
-    onDirectionsClick: () -> Unit = {},
     onGroupTripClick: () -> Unit = {}
 ) {
     Row(
@@ -31,13 +30,6 @@ fun BottomActionButtons(
             shape = CircleShape
         ) {
             Icon(Icons.Default.GpsFixed, contentDescription = "Recenter")
-        }
-
-        FloatingActionButton(
-            onClick = onDirectionsClick,
-            shape = CircleShape
-        ) {
-            Icon(Icons.Default.Navigation, contentDescription = "Directions")
         }
 
         FloatingActionButton(

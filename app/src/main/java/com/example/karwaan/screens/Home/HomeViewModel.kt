@@ -3,6 +3,7 @@ package com.example.karwaan.screens.Home
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.karwaan.data.remote.NominatimClient
+import com.example.karwaan.data.remote.RouteClient
 import com.example.karwaan.utils.SearchResult
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -15,6 +16,7 @@ import kotlinx.coroutines.delay
 class HomeViewModel : ViewModel() {
 
     private var suggestionJob: Job? = null
+    private var startSuggestionJob: Job? = null
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState
 
@@ -124,19 +126,154 @@ class HomeViewModel : ViewModel() {
 
             is HomeEvent.OnStartLocationChanged -> {
                 _uiState.update {
-                    it.copy(startLocationQuery = event.query)
+                    it.copy(
+                        startLocationQuery = event.query,
+                        isStartSearchLoading = event.query.length >= 2
+                    )
+                }
+
+                startSuggestionJob?.cancel()
+                startSuggestionJob = viewModelScope.launch {
+                    delay(300)
+
+                    if (event.query.length < 2) {
+                        _uiState.update { it.copy(startSuggestions = emptyList()) }
+                        return@launch
+                    }
+
+                    fetchStartSuggestions(event.query)
                 }
             }
 
-            HomeEvent.OnStartFromCurrentLocation -> {
-                // NEXT: route logic
+            is HomeEvent.OnStartSuggestionSelected -> {
+                _uiState.update {
+                    it.copy(
+                        startLocationQuery = event.result.name,
+                        startSuggestions = emptyList()
+                    )
+                }
             }
 
+
+            HomeEvent.OnStartFromCurrentLocation -> {
+                val user = _uiState.value.userLocation
+                val dest = _uiState.value.searchedLocation
+
+                if (user == null) {
+                    _uiState.update {
+                        it.copy(directionsError = "Waiting for GPS location…")
+                    }
+                    return
+                }
+
+                if (dest == null) {
+                    _uiState.update {
+                        it.copy(directionsError = "Destination not selected")
+                    }
+                    return
+                }
+
+                val start = SearchResult(
+                    name = "Current location",
+                    latitude = user.latitude,
+                    longitude = user.longitude
+                )
+
+                fetchRoute(start, dest)
+                _uiState.update { it.copy(isDirectionsMode = false) }
+            }
+
+
+
+
             HomeEvent.OnStartLocationSearch -> {
-                // NEXT: route logic
+                val startQuery = _uiState.value.startLocationQuery
+                val dest = _uiState.value.searchedLocation
+
+                if (startQuery.isBlank() || dest == null) return
+
+                viewModelScope.launch {
+                    try {
+                        val results = NominatimClient.api.searchLocation(startQuery)
+                        if (results.isNotEmpty()) {
+                            val r = results.first()
+
+                            val start = SearchResult(
+                                name = r.displayName,
+                                latitude = r.latitude.toDouble(),
+                                longitude = r.longitude.toDouble()
+                            )
+
+                            fetchRoute(start, dest)
+                            _uiState.update { it.copy(isDirectionsMode = false) }
+
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
             }
         }
     }
+
+
+    private fun fetchRoute(start: SearchResult, end: SearchResult) {
+        viewModelScope.launch {
+            try {
+                val coords =
+                    "${start.longitude},${start.latitude};${end.longitude},${end.latitude}"
+
+                val response = RouteClient.api.getRoute(coords)
+
+                val points = response.routes.first().geometry.coordinates.map {
+                    it[1] to it[0] // lat to lon
+                }
+
+                val route = response.routes.first()
+
+                _uiState.update {
+                    it.copy(
+                        routePoints = points,
+                        routeDistanceMeters = route.distance,
+                        routeDurationSeconds = route.duration
+                    )
+                }
+
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+
+    private suspend fun fetchStartSuggestions(query: String) {
+        try {
+            val results = NominatimClient.api.searchLocation(query)
+
+            val suggestions = results.map {
+                SearchResult(
+                    name = it.displayName,
+                    latitude = it.latitude.toDouble(),
+                    longitude = it.longitude.toDouble()
+                )
+            }
+
+            _uiState.update {
+                it.copy(
+                    startSuggestions = suggestions,
+                    isStartSearchLoading = false
+                )
+            }
+        } catch (e: Exception) {
+            _uiState.update {
+                it.copy(
+                    startSuggestions = emptyList(),
+                    isStartSearchLoading = false
+                )
+            }
+        }
+    }
+
 
 
     private suspend fun fetchSuggestions(query: String) {
@@ -190,5 +327,23 @@ class HomeViewModel : ViewModel() {
                 e.printStackTrace()
             }
         }
+    }
+
+    fun formatDistance(meters: Double): String {
+        return if (meters >= 1000)
+            String.format("%.1f km", meters / 1000)
+        else
+            "${meters.toInt()} m"
+    }
+
+    fun formatDuration(seconds: Double): String {
+        val minutes = (seconds / 60).toInt()
+        val hours = minutes / 60
+        val mins = minutes % 60
+
+        return if (hours > 0)
+            "${hours}h ${mins}m"
+        else
+            "${mins} min"
     }
 }

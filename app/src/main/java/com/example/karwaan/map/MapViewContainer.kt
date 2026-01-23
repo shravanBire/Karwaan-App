@@ -13,26 +13,27 @@ import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.MapView
 import org.maplibre.android.maps.Style
 import org.maplibre.android.style.layers.SymbolLayer
+import org.maplibre.android.style.layers.LineLayer
 import org.maplibre.android.style.layers.PropertyFactory.*
 import org.maplibre.android.style.sources.GeoJsonSource
 import org.maplibre.geojson.Feature
 import org.maplibre.geojson.Point
-
+import org.maplibre.geojson.LineString
 import com.example.karwaan.R
-
-import org.maplibre.android.style.layers.PropertyFactory.*
-
-
+import kotlinx.coroutines.delay
+import org.maplibre.android.style.layers.Property.LINE_CAP_ROUND
+import org.maplibre.android.style.layers.Property.LINE_JOIN_ROUND
 
 private const val USER_LOCATION_SOURCE_ID = "user-location-source"
 private const val USER_LOCATION_LAYER_ID = "user-location-layer"
 private const val USER_LOCATION_ICON_ID = "user-location-icon"
 
-
 private const val DESTINATION_SOURCE_ID = "destination-source"
 private const val DESTINATION_LAYER_ID = "destination-layer"
 private const val DESTINATION_ICON_ID = "destination-icon"
 
+private const val ROUTE_SOURCE_ID = "route-source"
+private const val ROUTE_LAYER_ID = "route-layer"
 
 @SuppressLint("MissingPermission")
 @Composable
@@ -40,11 +41,14 @@ fun MapViewContainer(
     modifier: Modifier = Modifier,
     searchedLocation: SearchResult?,
     userLocation: UserLocation?,
+    routePoints: List<Pair<Double, Double>>,
     recenterRequestId: Int
 ) {
     val context = LocalContext.current
     val mapView = remember { MapView(context) }
     var map by remember { mutableStateOf<MapLibreMap?>(null) }
+    var animatedRoutePoints by remember { mutableStateOf<List<Pair<Double, Double>>>(emptyList()) }
+
 
     AndroidView(
         modifier = modifier,
@@ -63,7 +67,6 @@ fun MapViewContainer(
                             context.getDrawable(R.drawable.user_location_dot)!!
                         )
 
-                        // 🔴 DESTINATION (red pin)
                         style.addImage(
                             DESTINATION_ICON_ID,
                             context.getDrawable(
@@ -71,32 +74,67 @@ fun MapViewContainer(
                             )!!
                         )
                     }
+                    mapLibreMap.uiSettings.apply {
+                        isCompassEnabled = true
+                        setCompassMargins(0, 350, 32, 0)
+                    }
                 }
             }
         }
     )
 
-    // 🔵 Update / move blue dot when user location changes
+    // 🔵 User location
     LaunchedEffect(userLocation) {
-        userLocation?.let { loc ->
-            map?.let { mapLibre ->
-                updateUserLocation(mapLibre, loc.latitude, loc.longitude)
-            }
-        }
-    }
-    LaunchedEffect(searchedLocation) {
-        searchedLocation?.let { dest ->
-            map?.let { mapLibre ->
-                updateDestinationLocation(
-                    mapLibre,
-                    dest.latitude,
-                    dest.longitude
-                )
+        userLocation?.let {
+            map?.let { m ->
+                updateUserLocation(m, it.latitude, it.longitude)
             }
         }
     }
 
-    // 🎯 Recenter camera when GPS button is pressed
+    // 🔴 Destination pin
+    LaunchedEffect(searchedLocation) {
+        searchedLocation?.let {
+            map?.let { m ->
+                updateDestinationLocation(m, it.latitude, it.longitude)
+            }
+        }
+    }
+
+    // 🛣 ROUTE POLYLINE
+    LaunchedEffect(routePoints) {
+        if (routePoints.isEmpty()) return@LaunchedEffect
+
+        animatedRoutePoints = emptyList()
+
+        val stepDelay = 2L
+
+        for (i in 1..routePoints.size) {
+            animatedRoutePoints = routePoints.take(i)
+            delay(stepDelay)
+        }
+    }
+
+    LaunchedEffect(routePoints) {
+        if (routePoints.isEmpty()) return@LaunchedEffect
+
+        map?.let { m ->
+            fitRouteInCamera(m, routePoints)
+        }
+    }
+
+    LaunchedEffect(animatedRoutePoints) {
+        if (animatedRoutePoints.isNotEmpty()) {
+            map?.let { m ->
+                updateRoute(m, animatedRoutePoints)
+            }
+        }
+    }
+
+
+
+
+    // 🎯 GPS recenter
     LaunchedEffect(userLocation, recenterRequestId) {
         userLocation?.let {
             map?.animateCamera(
@@ -109,7 +147,7 @@ fun MapViewContainer(
         }
     }
 
-    // 🎯 Animate camera when searched location changes
+    // 🎯 Animate to destination
     LaunchedEffect(searchedLocation) {
         searchedLocation?.let {
             map?.animateCamera(
@@ -129,64 +167,39 @@ private fun updateUserLocation(
     longitude: Double
 ) {
     val style = map.style ?: return
-
     val point = Point.fromLngLat(longitude, latitude)
     val feature = Feature.fromGeometry(point)
 
     val source = style.getSourceAs<GeoJsonSource>(USER_LOCATION_SOURCE_ID)
-
     if (source == null) {
-        // Create source
-        style.addSource(
-            GeoJsonSource(
-                USER_LOCATION_SOURCE_ID,
-                feature
-            )
-        )
-
-        // Create blue dot layer
+        style.addSource(GeoJsonSource(USER_LOCATION_SOURCE_ID, feature))
         style.addLayer(
-            SymbolLayer(
-                USER_LOCATION_LAYER_ID,
-                USER_LOCATION_SOURCE_ID
-            ).withProperties(
+            SymbolLayer(USER_LOCATION_LAYER_ID, USER_LOCATION_SOURCE_ID).withProperties(
                 iconImage(USER_LOCATION_ICON_ID),
                 iconSize(1.2f),
-                iconIgnorePlacement(true),
-                iconAllowOverlap(true)
+                iconAllowOverlap(true),
+                iconIgnorePlacement(true)
             )
         )
     } else {
-        // Update existing location
         source.setGeoJson(feature)
     }
 }
+
 private fun updateDestinationLocation(
     map: MapLibreMap,
     latitude: Double,
     longitude: Double
 ) {
     val style = map.style ?: return
-
     val point = Point.fromLngLat(longitude, latitude)
     val feature = Feature.fromGeometry(point)
 
     val source = style.getSourceAs<GeoJsonSource>(DESTINATION_SOURCE_ID)
-
     if (source == null) {
-        // First time: create source + layer
-        style.addSource(
-            GeoJsonSource(
-                DESTINATION_SOURCE_ID,
-                feature
-            )
-        )
-
+        style.addSource(GeoJsonSource(DESTINATION_SOURCE_ID, feature))
         style.addLayer(
-            SymbolLayer(
-                DESTINATION_LAYER_ID,
-                DESTINATION_SOURCE_ID
-            ).withProperties(
+            SymbolLayer(DESTINATION_LAYER_ID, DESTINATION_SOURCE_ID).withProperties(
                 iconImage(DESTINATION_ICON_ID),
                 iconSize(1.3f),
                 iconAllowOverlap(true),
@@ -194,8 +207,56 @@ private fun updateDestinationLocation(
             )
         )
     } else {
-        // Update destination position
         source.setGeoJson(feature)
     }
 }
 
+private fun fitRouteInCamera(
+    map: MapLibreMap,
+    points: List<Pair<Double, Double>>
+) {
+    if (points.isEmpty()) return
+
+    val boundsBuilder = org.maplibre.android.geometry.LatLngBounds.Builder()
+
+    points.forEach { (lat, lon) ->
+        boundsBuilder.include(LatLng(lat, lon))
+    }
+
+    val bounds = boundsBuilder.build()
+
+    map.animateCamera(
+        CameraUpdateFactory.newLatLngBounds(
+            bounds,
+            320
+        ),
+        1200
+    )
+}
+
+
+private fun updateRoute(
+    map: MapLibreMap,
+    points: List<Pair<Double, Double>>
+) {
+    val style = map.style ?: return
+
+    val lineString = LineString.fromLngLats(
+        points.map { Point.fromLngLat(it.second, it.first) }
+    )
+
+    val source = style.getSourceAs<GeoJsonSource>(ROUTE_SOURCE_ID)
+    if (source == null) {
+        style.addSource(GeoJsonSource(ROUTE_SOURCE_ID, lineString))
+        style.addLayer(
+            LineLayer(ROUTE_LAYER_ID, ROUTE_SOURCE_ID).withProperties(
+                lineColor("#1A73E8"),
+                lineWidth(6f),
+                lineCap(LINE_CAP_ROUND),
+                lineJoin(LINE_JOIN_ROUND)
+            )
+        )
+    } else {
+        source.setGeoJson(lineString)
+    }
+}

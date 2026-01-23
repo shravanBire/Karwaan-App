@@ -18,6 +18,21 @@ data class HomeUiState(
     val recenterRequestId: Int = 0,
 
     val searchSuggestions: List<SearchResult> = emptyList(),
-    val isSearchLoading: Boolean = false
+    val isSearchLoading: Boolean = false,
+
+    val startSuggestions: List<SearchResult> = emptyList(),
+    val isStartSearchLoading: Boolean = false,
+
+    val routeStart: SearchResult? = null,
+    val routeEnd: SearchResult? = null,
+
+    val routePoints: List<Pair<Double, Double>> = emptyList(),
+
+    val directionsError: String? = null,
+
+    val routeDistanceMeters: Double? = null,
+    val routeDurationSeconds: Double? = null
+
+
 )
 

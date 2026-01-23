@@ -19,4 +19,5 @@ sealed class HomeEvent {
     object OnStartFromCurrentLocation : HomeEvent()
     object OnStartLocationSearch : HomeEvent()
     data class OnSearchSuggestionSelected(val result: SearchResult) : HomeEvent()
+    data class OnStartSuggestionSelected(val result: SearchResult) : HomeEvent()
 }

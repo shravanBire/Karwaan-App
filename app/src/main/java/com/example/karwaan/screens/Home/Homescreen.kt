@@ -11,6 +11,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Divider
 import androidx.compose.material3.ListItem
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -107,11 +108,6 @@ fun HomeScreen(
 
 
 
-
-
-
-
-
     Box(modifier = Modifier.fillMaxSize()) {
 
         // 🗺 MAP
@@ -119,14 +115,33 @@ fun HomeScreen(
             modifier = Modifier.fillMaxSize(),
             searchedLocation = state.searchedLocation,
             userLocation = state.userLocation,
+            routePoints = state.routePoints,
             recenterRequestId = state.recenterRequestId
         )
+
+        if (state.routeDistanceMeters != null && state.routeDurationSeconds != null) {
+            Card(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 96.dp),
+                elevation = CardDefaults.cardElevation(6.dp)
+            ) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Text(
+                        text = "${viewModel.formatDuration(state.routeDurationSeconds!!)} • ${
+                            viewModel.formatDistance(state.routeDistanceMeters!!)
+                        }",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            }
+        }
 
         // 🔍 TOP SEARCH BAR (ONLY ONE)
         TopSearchBar(
             modifier = Modifier
                 .align(Alignment.TopCenter)
-                .padding(16.dp),
+                .padding(top = 50.dp, start = 16.dp, end = 16.dp),
 
             query = state.searchQuery,
             placeholder = state.searchedLocation?.name ?: "Search destination",
@@ -155,7 +170,7 @@ fun HomeScreen(
             Card(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
-                    .padding(top = 72.dp)
+                    .padding(top = 110.dp)
                     .fillMaxWidth(0.95f),
                 elevation = CardDefaults.cardElevation(6.dp)
             ) {
@@ -217,8 +232,12 @@ fun HomeScreen(
         if (state.isDirectionsMode) {
             DirectionsDialog(
                 startLocationQuery = state.startLocationQuery,
+                startSuggestions = state.startSuggestions,
                 onQueryChange = {
                     viewModel.onEvent(HomeEvent.OnStartLocationChanged(it))
+                },
+                onSuggestionSelected = {
+                    viewModel.onEvent(HomeEvent.OnStartSuggestionSelected(it))
                 },
                 onFromCurrentLocation = {
                     viewModel.onEvent(HomeEvent.OnStartFromCurrentLocation)
@@ -230,6 +249,15 @@ fun HomeScreen(
                     viewModel.onEvent(HomeEvent.OnDirectionsDismissed)
                 }
             )
+            state.directionsError?.let { error ->
+                Text(
+                    text = error,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .padding(16.dp)
+                )
+            }
         }
     }
 }
