@@ -9,6 +9,6 @@ interface NominatimApi {
     suspend fun searchLocation(
         @Query("q") query: String,
         @Query("format") format: String = "json",
-        @Query("limit") limit: Int = 1
+        @Query("limit") limit: Int = 5
     ): List<NominatimResult>
 }

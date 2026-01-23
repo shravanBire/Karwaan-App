@@ -1,33 +1,27 @@
 package com.example.karwaan.screens.Home
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.example.karwaan.data.remote.NominatimClient
 import com.example.karwaan.utils.SearchResult
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
-import androidx.lifecycle.viewModelScope
-import com.example.karwaan.data.remote.NominatimClient
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 
 
 class HomeViewModel : ViewModel() {
 
+    private var suggestionJob: Job? = null
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState
 
     fun onEvent(event: HomeEvent) {
         when (event) {
 
-            is HomeEvent.OnRecenterRequested -> {
-                _uiState.update {
-                    it.copy(recenterRequestId = it.recenterRequestId + 1)
-                }
-            }
-
-            HomeEvent.OnGpsRecenterClicked -> {
-                // UI will request permission if needed
-            }
-
+            // 🔵 GPS / LOCATION
             is HomeEvent.OnUserLocationUpdated -> {
                 _uiState.update {
                     it.copy(userLocation = event.location)
@@ -40,17 +34,52 @@ class HomeViewModel : ViewModel() {
                 }
             }
 
+            HomeEvent.OnRecenterRequested -> {
+                _uiState.update {
+                    it.copy(recenterRequestId = it.recenterRequestId + 1)
+                }
+            }
+
+            // 🔍 SEARCH
             HomeEvent.OnSearchActivated -> {
                 _uiState.update {
-                    it.copy(isSearching = true, searchQuery = "")
+                    it.copy(isSearching = true)
                 }
             }
 
             is HomeEvent.OnSearchQueryChanged -> {
                 _uiState.update {
-                    it.copy(searchQuery = event.query)
+                    it.copy(
+                        searchQuery = event.query,
+                        isSearchLoading = event.query.length >= 2
+                    )
+                }
+
+                suggestionJob?.cancel()
+                suggestionJob = viewModelScope.launch {
+                    delay(300) // 🔥 debounce
+
+                    if (event.query.length < 2) {
+                        _uiState.update { it.copy(searchSuggestions = emptyList()) }
+                        return@launch
+                    }
+
+                    fetchSuggestions(event.query)
                 }
             }
+
+            is HomeEvent.OnSearchSuggestionSelected -> {
+                _uiState.update {
+                    it.copy(
+                        searchedLocation = event.result,
+                        searchQuery = "",
+                        searchSuggestions = emptyList(),
+                        isSearching = false
+                    )
+                }
+            }
+
+
 
             HomeEvent.OnSearchSubmitted -> {
                 resolveLocation(_uiState.value.searchQuery)
@@ -65,13 +94,25 @@ class HomeViewModel : ViewModel() {
                 }
             }
 
+            HomeEvent.OnClearSearch -> {
+                _uiState.update {
+                    it.copy(
+                        searchQuery = "",
+                        searchedLocation = null,
+                        isSearching = false,
+                        isDirectionsMode = false,
+                        startLocationQuery = ""
+                    )
+                }
+            }
+
+            // 🧭 DIRECTIONS
             HomeEvent.OnDirectionsClicked -> {
                 _uiState.update {
                     it.copy(isDirectionsMode = true)
                 }
             }
 
-            HomeEvent.OnDirectionsDismissed,
             HomeEvent.OnDirectionsDismissed -> {
                 _uiState.update {
                     it.copy(
@@ -87,24 +128,41 @@ class HomeViewModel : ViewModel() {
                 }
             }
 
-            HomeEvent.OnClearSearch -> {
-                _uiState.update {
-                    HomeUiState()
-                }
-            }
-
-
             HomeEvent.OnStartFromCurrentLocation -> {
-                // TODO: route from current location
+                // NEXT: route logic
             }
 
             HomeEvent.OnStartLocationSearch -> {
-                // TODO: route from custom start location
+                // NEXT: route logic
+            }
+        }
+    }
+
+
+    private suspend fun fetchSuggestions(query: String) {
+        try {
+            val results = NominatimClient.api.searchLocation(query)
+
+            val suggestions = results.map {
+                SearchResult(
+                    name = it.displayName,
+                    latitude = it.latitude.toDouble(),
+                    longitude = it.longitude.toDouble()
+                )
             }
 
-            is HomeEvent.OnLocationPermissionResult -> {
-                // For now, just ignore or store later
-                // _uiState.update { it.copy(hasLocationPermission = event.granted) }
+            _uiState.update {
+                it.copy(
+                    searchSuggestions = suggestions,
+                    isSearchLoading = false
+                )
+            }
+        } catch (e: Exception) {
+            _uiState.update {
+                it.copy(
+                    searchSuggestions = emptyList(),
+                    isSearchLoading = false
+                )
             }
         }
     }
@@ -116,24 +174,21 @@ class HomeViewModel : ViewModel() {
         viewModelScope.launch {
             try {
                 val results = NominatimClient.api.searchLocation(query)
-
                 if (results.isNotEmpty()) {
                     val result = results.first()
-
-                    val searchResult = SearchResult(
-                        name = result.displayName,
-                        latitude = result.latitude.toDouble(),
-                        longitude = result.longitude.toDouble()
+                    onEvent(
+                        HomeEvent.OnLocationResolved(
+                            SearchResult(
+                                name = result.displayName,
+                                latitude = result.latitude.toDouble(),
+                                longitude = result.longitude.toDouble()
+                            )
+                        )
                     )
-
-                    onEvent(HomeEvent.OnLocationResolved(searchResult))
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
-                // later: show error UI
             }
         }
     }
-
-
 }

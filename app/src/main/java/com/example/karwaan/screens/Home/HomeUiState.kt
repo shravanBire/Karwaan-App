@@ -15,6 +15,9 @@ data class HomeUiState(
     val hasLocationPermission: Boolean = false,
     val userLocation: UserLocation? = null,
 
-    val recenterRequestId: Int = 0
+    val recenterRequestId: Int = 0,
+
+    val searchSuggestions: List<SearchResult> = emptyList(),
+    val isSearchLoading: Boolean = false
 )
 

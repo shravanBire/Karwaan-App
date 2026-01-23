@@ -4,8 +4,13 @@ import android.annotation.SuppressLint
 import android.os.Looper
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Divider
+import androidx.compose.material3.ListItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -145,6 +150,31 @@ fun HomeScreen(
                 viewModel.onEvent(HomeEvent.OnClearSearch)
             }
         )
+
+        if (state.isSearching && state.searchSuggestions.isNotEmpty()) {
+            Card(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 72.dp)
+                    .fillMaxWidth(0.95f),
+                elevation = CardDefaults.cardElevation(6.dp)
+            ) {
+                Column {
+                    state.searchSuggestions.forEach { suggestion ->
+                        ListItem(
+                            headlineContent = { Text(suggestion.name) },
+                            modifier = Modifier.clickable {
+                                viewModel.onEvent(
+                                    HomeEvent.OnSearchSuggestionSelected(suggestion)
+                                )
+                            }
+                        )
+                        Divider()
+                    }
+                }
+            }
+        }
+
 
         // 🔘 BOTTOM UI
         if (state.searchedLocation == null) {
