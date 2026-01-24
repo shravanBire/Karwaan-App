@@ -31,7 +31,8 @@ data class HomeUiState(
     val directionsError: String? = null,
 
     val routeDistanceMeters: Double? = null,
-    val routeDurationSeconds: Double? = null
+    val routeDurationSeconds: Double? = null,
+
 
 
 )

@@ -26,9 +26,12 @@ class HomeViewModel : ViewModel() {
             // 🔵 GPS / LOCATION
             is HomeEvent.OnUserLocationUpdated -> {
                 _uiState.update {
-                    it.copy(userLocation = event.location)
+                    it.copy(
+                        userLocation = event.location
+                    )
                 }
             }
+
 
             is HomeEvent.OnLocationPermissionResult -> {
                 _uiState.update {
@@ -38,9 +41,12 @@ class HomeViewModel : ViewModel() {
 
             HomeEvent.OnRecenterRequested -> {
                 _uiState.update {
-                    it.copy(recenterRequestId = it.recenterRequestId + 1)
+                    it.copy(
+                        recenterRequestId = it.recenterRequestId + 1,
+                    )
                 }
             }
+
 
             // 🔍 SEARCH
             HomeEvent.OnSearchActivated -> {
@@ -99,14 +105,33 @@ class HomeViewModel : ViewModel() {
             HomeEvent.OnClearSearch -> {
                 _uiState.update {
                     it.copy(
+                        // 🔍 Search reset
                         searchQuery = "",
-                        searchedLocation = null,
                         isSearching = false,
+
+                        // 📍 Remove destination
+                        searchedLocation = null,
+
+                        // 🧭 Exit directions
                         isDirectionsMode = false,
-                        startLocationQuery = ""
+                        startLocationQuery = "",
+                        startSuggestions = emptyList(),
+                        directionsError = null,
+
+                        // 🛣 CLEAR ROUTE (THIS REMOVES POLYLINE)
+                        routePoints = emptyList(),
+                        routeDistanceMeters = null,
+                        routeDurationSeconds = null,
+                        routeStart = null,
+                        routeEnd = null,
+
+                        // 🎯 FORCE RECENTER TO USER
+                        recenterRequestId = it.recenterRequestId + 1
                     )
                 }
             }
+
+
 
             // 🧭 DIRECTIONS
             HomeEvent.OnDirectionsClicked -> {
@@ -232,10 +257,17 @@ class HomeViewModel : ViewModel() {
                 val route = response.routes.first()
 
                 _uiState.update {
+                    val correctedDurationSeconds =
+                        maxOf(
+                            route.duration,
+                            (route.distance / 55_000.0) * 3600  // 55 km/h realistic avg
+                        )
+
                     it.copy(
+
                         routePoints = points,
                         routeDistanceMeters = route.distance,
-                        routeDurationSeconds = route.duration
+                        routeDurationSeconds = correctedDurationSeconds
                     )
                 }
 

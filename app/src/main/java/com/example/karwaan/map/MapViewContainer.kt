@@ -2,6 +2,7 @@ package com.example.karwaan.map
 
 import android.annotation.SuppressLint
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
@@ -42,7 +43,7 @@ fun MapViewContainer(
     searchedLocation: SearchResult?,
     userLocation: UserLocation?,
     routePoints: List<Pair<Double, Double>>,
-    recenterRequestId: Int
+    recenterRequestId: Int,
 ) {
     val context = LocalContext.current
     val mapView = remember { MapView(context) }
@@ -62,11 +63,13 @@ fun MapViewContainer(
                             .fromUri("https://tiles.openfreemap.org/styles/liberty")
                     ) { style ->
 
+                        // 🔵 User location blue dot
                         style.addImage(
                             USER_LOCATION_ICON_ID,
                             context.getDrawable(R.drawable.user_location_dot)!!
                         )
 
+                        // 🔴 Destination pin
                         style.addImage(
                             DESTINATION_ICON_ID,
                             context.getDrawable(
@@ -74,6 +77,7 @@ fun MapViewContainer(
                             )!!
                         )
                     }
+
                     mapLibreMap.uiSettings.apply {
                         isCompassEnabled = true
                         setCompassMargins(0, 350, 32, 0)
@@ -83,7 +87,10 @@ fun MapViewContainer(
         }
     )
 
-    // 🔵 User location
+    var hasAutoCentered by rememberSaveable { mutableStateOf(false) }
+
+    // 🔵 USER LOCATION MARKER UPDATES (moves every 2–3 meters)
+    // ✅ DOES NOT move camera
     LaunchedEffect(userLocation) {
         userLocation?.let {
             map?.let { m ->
@@ -92,7 +99,7 @@ fun MapViewContainer(
         }
     }
 
-    // 🔴 Destination pin
+    // 🔴 DESTINATION MARKER
     LaunchedEffect(searchedLocation) {
         searchedLocation?.let {
             map?.let { m ->
@@ -101,25 +108,14 @@ fun MapViewContainer(
         }
     }
 
-    // 🛣 ROUTE POLYLINE
+    //  ROUTE DRAWING (animated)
     LaunchedEffect(routePoints) {
         if (routePoints.isEmpty()) return@LaunchedEffect
 
         animatedRoutePoints = emptyList()
-
-        val stepDelay = 2L
-
         for (i in 1..routePoints.size) {
             animatedRoutePoints = routePoints.take(i)
-            delay(stepDelay)
-        }
-    }
-
-    LaunchedEffect(routePoints) {
-        if (routePoints.isEmpty()) return@LaunchedEffect
-
-        map?.let { m ->
-            fitRouteInCamera(m, routePoints)
+            delay(2L)
         }
     }
 
@@ -131,23 +127,47 @@ fun MapViewContainer(
         }
     }
 
-
-
-
-    // 🎯 GPS recenter
-    LaunchedEffect(userLocation, recenterRequestId) {
-        userLocation?.let {
-            map?.animateCamera(
-                CameraUpdateFactory.newLatLngZoom(
-                    LatLng(it.latitude, it.longitude),
-                    15.5
-                ),
-                1000
-            )
+    LaunchedEffect(routePoints) {
+        map?.let { m ->
+            if (routePoints.isEmpty()) {
+                clearRoute(m)   // 🔥 THIS IS THE KEY
+            } else {
+                fitRouteInCamera(m, routePoints)
+            }
         }
     }
 
-    // 🎯 Animate to destination
+    // 🎯 MANUAL RECENTER (button click)
+    LaunchedEffect(recenterRequestId) {
+        val m = map ?: return@LaunchedEffect
+        val loc = userLocation ?: return@LaunchedEffect
+
+        m.animateCamera(
+            CameraUpdateFactory.newLatLngZoom(
+                LatLng(loc.latitude, loc.longitude),
+                15.5
+            ),
+            1000
+        )
+    }
+
+
+    LaunchedEffect(map, userLocation) {
+        val m = map ?: return@LaunchedEffect
+        val loc = userLocation ?: return@LaunchedEffect
+        if (hasAutoCentered) return@LaunchedEffect
+
+        m.animateCamera(
+            CameraUpdateFactory.newLatLngZoom(
+                LatLng(loc.latitude, loc.longitude),
+                15.5
+            ),
+            1000
+        )
+
+        hasAutoCentered = true   // 🔥 THIS WAS MISSING
+    }
+
     LaunchedEffect(searchedLocation) {
         searchedLocation?.let {
             map?.animateCamera(
@@ -161,14 +181,11 @@ fun MapViewContainer(
     }
 }
 
-private fun updateUserLocation(
-    map: MapLibreMap,
-    latitude: Double,
-    longitude: Double
-) {
+
+
+private fun updateUserLocation(map: MapLibreMap, latitude: Double, longitude: Double) {
     val style = map.style ?: return
-    val point = Point.fromLngLat(longitude, latitude)
-    val feature = Feature.fromGeometry(point)
+    val feature = Feature.fromGeometry(Point.fromLngLat(longitude, latitude))
 
     val source = style.getSourceAs<GeoJsonSource>(USER_LOCATION_SOURCE_ID)
     if (source == null) {
@@ -186,14 +203,9 @@ private fun updateUserLocation(
     }
 }
 
-private fun updateDestinationLocation(
-    map: MapLibreMap,
-    latitude: Double,
-    longitude: Double
-) {
+private fun updateDestinationLocation(map: MapLibreMap, latitude: Double, longitude: Double) {
     val style = map.style ?: return
-    val point = Point.fromLngLat(longitude, latitude)
-    val feature = Feature.fromGeometry(point)
+    val feature = Feature.fromGeometry(Point.fromLngLat(longitude, latitude))
 
     val source = style.getSourceAs<GeoJsonSource>(DESTINATION_SOURCE_ID)
     if (source == null) {
@@ -211,39 +223,15 @@ private fun updateDestinationLocation(
     }
 }
 
-private fun fitRouteInCamera(
-    map: MapLibreMap,
-    points: List<Pair<Double, Double>>
-) {
-    if (points.isEmpty()) return
-
+private fun fitRouteInCamera(map: MapLibreMap, points: List<Pair<Double, Double>>) {
     val boundsBuilder = org.maplibre.android.geometry.LatLngBounds.Builder()
-
-    points.forEach { (lat, lon) ->
-        boundsBuilder.include(LatLng(lat, lon))
-    }
-
-    val bounds = boundsBuilder.build()
-
-    map.animateCamera(
-        CameraUpdateFactory.newLatLngBounds(
-            bounds,
-            320
-        ),
-        1200
-    )
+    points.forEach { boundsBuilder.include(LatLng(it.first, it.second)) }
+    map.animateCamera(CameraUpdateFactory.newLatLngBounds(boundsBuilder.build(), 320), 1200)
 }
 
-
-private fun updateRoute(
-    map: MapLibreMap,
-    points: List<Pair<Double, Double>>
-) {
+private fun updateRoute(map: MapLibreMap, points: List<Pair<Double, Double>>) {
     val style = map.style ?: return
-
-    val lineString = LineString.fromLngLats(
-        points.map { Point.fromLngLat(it.second, it.first) }
-    )
+    val lineString = LineString.fromLngLats(points.map { Point.fromLngLat(it.second, it.first) })
 
     val source = style.getSourceAs<GeoJsonSource>(ROUTE_SOURCE_ID)
     if (source == null) {
@@ -260,3 +248,17 @@ private fun updateRoute(
         source.setGeoJson(lineString)
     }
 }
+
+
+private fun clearRoute(map: MapLibreMap) {
+    val style = map.style ?: return
+
+    style.getLayer(ROUTE_LAYER_ID)?.let {
+        style.removeLayer(ROUTE_LAYER_ID)
+    }
+
+    style.getSource(ROUTE_SOURCE_ID)?.let {
+        style.removeSource(ROUTE_SOURCE_ID)
+    }
+}
+
