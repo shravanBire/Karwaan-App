@@ -22,6 +22,54 @@ class HomeViewModel : ViewModel() {
 
     fun onEvent(event: HomeEvent) {
         when (event) {
+            HomeEvent.OnGroupTripClicked -> {
+                _uiState.update {
+                    it.copy(isGroupTripDialogVisible = true)
+                }
+            }
+
+            HomeEvent.OnGroupTripDismissed -> {
+                _uiState.update {
+                    it.copy(isGroupTripDialogVisible = false)
+                }
+            }
+
+            is HomeEvent.OnDisplayNameChanged -> {
+                _uiState.update { it.copy(displayName = event.name) }
+            }
+
+            is HomeEvent.OnTripCodeChanged -> {
+                _uiState.update { it.copy(tripCode = event.code) }
+            }
+
+            HomeEvent.OnCreateTrip -> {
+                val generatedCode = "KAR-${(1000..9999).random()}" // UI-only
+
+                _uiState.update {
+                    it.copy(
+                        isGroupTripDialogVisible = false,
+                        isInGroupTrip = true,
+                        tripCode = generatedCode,
+                        tripMembers = listOf(it.displayName.ifBlank { "You" })
+                    )
+                }
+            }
+
+            HomeEvent.OnJoinTrip -> {
+                _uiState.update {
+                    it.copy(
+                        isGroupTripDialogVisible = false,
+                        isInGroupTrip = true,
+                        tripMembers = listOf(it.displayName.ifBlank { "You" }, "Member A", "Member B")
+                    )
+                }
+            }
+
+            HomeEvent.OnLeaveTrip -> {
+                _uiState.update {
+                    HomeUiState() // reset everything
+                }
+            }
 
             // 🔵 GPS / LOCATION
             is HomeEvent.OnUserLocationUpdated -> {

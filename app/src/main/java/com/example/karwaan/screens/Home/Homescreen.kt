@@ -124,6 +124,22 @@ fun HomeScreen(
             recenterRequestId = state.recenterRequestId
               )
 
+        // 🧭 ACTIVE GROUP TRIP CARD
+        val tripCode = state.tripCode?:""
+        if (state.isInGroupTrip && state.tripCode != null) {
+            TripInfoCard(
+                tripCode = tripCode ,
+                members = state.tripMembers,
+                onLeave = {
+                    viewModel.onEvent(HomeEvent.OnLeaveTrip)
+                },
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(top = 120.dp, start = 16.dp, end = 16.dp)            )
+        }
+
+
+
         if (state.routeDistanceMeters != null && state.routeDurationSeconds != null) {
             Card(
                 modifier = Modifier
@@ -214,6 +230,9 @@ fun HomeScreen(
                             android.Manifest.permission.ACCESS_FINE_LOCATION
                         )
                     }
+                },
+                onGroupTripClick = {
+                    viewModel.onEvent(HomeEvent.OnGroupTripClicked)
                 }
             )
 
@@ -255,6 +274,28 @@ fun HomeScreen(
                     Text("Directions")
                 }
             }
+        }
+        // 👥 GROUP TRIP DIALOG
+        if (state.isGroupTripDialogVisible) {
+            GroupTripDialog(
+                displayName = state.displayName,
+                tripCode = state.tripCode,
+                onNameChange = {
+                    viewModel.onEvent(HomeEvent.OnDisplayNameChanged(it))
+                },
+                onCodeChange = {
+                    viewModel.onEvent(HomeEvent.OnTripCodeChanged(it))
+                },
+                onCreate = {
+                    viewModel.onEvent(HomeEvent.OnCreateTrip)
+                },
+                onJoin = {
+                    viewModel.onEvent(HomeEvent.OnJoinTrip)
+                },
+                onDismiss = {
+                    viewModel.onEvent(HomeEvent.OnGroupTripDismissed)
+                }
+            )
         }
 
 

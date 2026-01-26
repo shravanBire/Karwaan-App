@@ -33,7 +33,12 @@ data class HomeUiState(
     val routeDistanceMeters: Double? = null,
     val routeDurationSeconds: Double? = null,
 
+    val isGroupTripDialogVisible: Boolean = false,
+    val isInGroupTrip: Boolean = false,
 
+    val tripCode: String? = null,
+    val displayName: String = "",
 
+    val tripMembers: List<String> = emptyList() // UI-only for now
 )
 

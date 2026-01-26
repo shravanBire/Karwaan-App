@@ -20,5 +20,14 @@ sealed class HomeEvent {
     object OnStartLocationSearch : HomeEvent()
     data class OnSearchSuggestionSelected(val result: SearchResult) : HomeEvent()
     data class OnStartSuggestionSelected(val result: SearchResult) : HomeEvent()
+    object OnGroupTripClicked : HomeEvent()
+    object OnGroupTripDismissed : HomeEvent()
+
+    data class OnDisplayNameChanged(val name: String) : HomeEvent()
+    data class OnTripCodeChanged(val code: String) : HomeEvent()
+
+    object OnCreateTrip : HomeEvent()
+    object OnJoinTrip : HomeEvent()
+    object OnLeaveTrip : HomeEvent()
 
 }

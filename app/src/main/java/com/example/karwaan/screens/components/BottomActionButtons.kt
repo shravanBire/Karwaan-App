@@ -18,7 +18,7 @@ import com.example.karwaan.screens.Home.HomeViewModel
 fun BottomActionButtons(
     modifier: Modifier = Modifier,
     onRecenterClick: () -> Unit,
-    onGroupTripClick: () -> Unit = {}
+    onGroupTripClick: () -> Unit
 ) {
     Row(
         modifier = modifier,
