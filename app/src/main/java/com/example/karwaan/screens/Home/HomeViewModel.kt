@@ -1,24 +1,54 @@
 package com.example.karwaan.screens.Home
 
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.karwaan.data.remote.NominatimClient
 import com.example.karwaan.data.remote.RouteClient
+import com.example.karwaan.data.remote.supabase.SupabaseProvider
+import com.example.karwaan.data.remote.supabase.TripRepository
 import com.example.karwaan.utils.SearchResult
+import io.github.jan.supabase.postgrest.from
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
+import android.provider.Settings
+import android.util.Log
+import com.example.karwaan.utils.UserLocation
+import java.util.UUID
 
 
-class HomeViewModel : ViewModel() {
+
+class HomeViewModel(
+    application: Application
+) : AndroidViewModel(application) {
+
+    private val tripRepository = TripRepository()
+
 
     private var suggestionJob: Job? = null
     private var startSuggestionJob: Job? = null
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState
+
+    private val repo = com.example.karwaan.data.remote.supabase.TripRepository()
+    private val realtime = com.example.karwaan.data.remote.supabase.RealtimeManager()
+    private var realtimeJob: kotlinx.coroutines.Job? = null
+    private var lastSentLocation: UserLocation? = null
+
+
+    private val deviceId: String =
+        UUID.nameUUIDFromBytes(
+            Settings.Secure.getString(
+                getApplication<Application>().contentResolver,
+                Settings.Secure.ANDROID_ID
+            ).toByteArray()
+        ).toString()
+
+
 
     fun onEvent(event: HomeEvent) {
         when (event) {
@@ -43,42 +73,116 @@ class HomeViewModel : ViewModel() {
             }
 
             HomeEvent.OnCreateTrip -> {
-                val generatedCode = "KAR-${(1000..9999).random()}" // UI-only
+                viewModelScope.launch {
+                    try {
+                        val trip = repo.createTrip(
+                            hostId = deviceId,
+                            displayName = _uiState.value.displayName.ifBlank { "You" }
+                        )
 
-                _uiState.update {
-                    it.copy(
-                        isGroupTripDialogVisible = false,
-                        isInGroupTrip = true,
-                        tripCode = generatedCode,
-                        tripMembers = listOf(it.displayName.ifBlank { "You" })
-                    )
+                        subscribeRealtime(trip.id)
+
+                        _uiState.update {
+                            it.copy(
+                                isGroupTripDialogVisible = false,
+                                isInGroupTrip = true,
+                                tripCode = trip.trip_code.toString(),
+                                tripId = trip.id,
+                                userId = deviceId
+                            )
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
                 }
             }
+
+
 
             HomeEvent.OnJoinTrip -> {
-                _uiState.update {
-                    it.copy(
-                        isGroupTripDialogVisible = false,
-                        isInGroupTrip = true,
-                        tripMembers = listOf(it.displayName.ifBlank { "You" }, "Member A", "Member B")
-                    )
+                viewModelScope.launch {
+                    try {
+                        val code = _uiState.value.tripCode?.toIntOrNull() ?: return@launch
+
+                        val trip = repo.joinTrip(
+                            tripCode = code,
+                            userId = deviceId,
+                            displayName = _uiState.value.displayName.ifBlank { "You" }
+                        )
+
+                        subscribeRealtime(trip.id)
+
+                        _uiState.update {
+                            it.copy(
+                                isGroupTripDialogVisible = false,
+                                isInGroupTrip = true,
+                                tripId = trip.id,
+                                userId = deviceId
+                            )
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
                 }
             }
+
+
 
             HomeEvent.OnLeaveTrip -> {
-                _uiState.update {
-                    HomeUiState() // reset everything
+                viewModelScope.launch {
+                    val state = _uiState.value
+                    try {
+                        if (state.tripId != null && state.userId != null) {
+                            repo.leaveTrip(state.tripId, state.userId)
+                        }
+                    } catch (e: Exception) { e.printStackTrace() }
+
+                    realtimeJob?.cancel()
+                    _uiState.value = HomeUiState()
                 }
             }
 
-            // 🔵 GPS / LOCATION
+
             is HomeEvent.OnUserLocationUpdated -> {
+                val location = event.location
+
                 _uiState.update {
-                    it.copy(
-                        userLocation = event.location
+                    it.copy(userLocation = location)
+                }
+
+                val state = _uiState.value
+                if (!state.isInGroupTrip || state.tripId == null) return
+
+                val last = lastSentLocation
+                if (last != null) {
+                    val results = FloatArray(1)
+                    android.location.Location.distanceBetween(
+                        last.latitude,
+                        last.longitude,
+                        location.latitude,
+                        location.longitude,
+                        results
                     )
+                    if (results[0] < 2f) return
+                }
+
+                lastSentLocation = location
+
+                viewModelScope.launch {
+                    try {
+                        tripRepository.updateLocation(
+                            tripId = state.tripId,
+                            userId = deviceId,
+                            lat = location.latitude,
+                            lng = location.longitude
+                        )
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
                 }
             }
+
+
 
 
             is HomeEvent.OnLocationPermissionResult -> {
@@ -95,8 +199,6 @@ class HomeViewModel : ViewModel() {
                 }
             }
 
-
-            // 🔍 SEARCH
             HomeEvent.OnSearchActivated -> {
                 _uiState.update {
                     it.copy(isSearching = true)
@@ -180,8 +282,6 @@ class HomeViewModel : ViewModel() {
             }
 
 
-
-            // 🧭 DIRECTIONS
             HomeEvent.OnDirectionsClicked -> {
                 _uiState.update {
                     it.copy(isDirectionsMode = true)
@@ -426,4 +526,19 @@ class HomeViewModel : ViewModel() {
         else
             "${mins} min"
     }
+    private fun subscribeRealtime(tripId: String) {
+        realtimeJob?.cancel()
+
+        realtimeJob = viewModelScope.launch {
+            realtime.observeMembers(tripId)
+                .collect { members ->
+                    Log.d("Realtime", "Received ${members.size} members")
+                    _uiState.update {
+                        it.copy(tripMembers = members)
+                    }
+                }
+        }
+    }
+    }
 }
+

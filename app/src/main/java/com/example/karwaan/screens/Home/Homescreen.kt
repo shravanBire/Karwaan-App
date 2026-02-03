@@ -11,7 +11,6 @@ import androidx.compose.material.icons.filled.GpsFixed
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Divider
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -121,8 +120,10 @@ fun HomeScreen(
             searchedLocation = state.searchedLocation,
             userLocation = state.userLocation,
             routePoints = state.routePoints,
-            recenterRequestId = state.recenterRequestId
-              )
+            recenterRequestId = state.recenterRequestId,
+            tripMembers = state.tripMembers,
+            currentUserId = state.userId
+        )
 
         // 🧭 ACTIVE GROUP TRIP CARD
         val tripCode = state.tripCode?:""

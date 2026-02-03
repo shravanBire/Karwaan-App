@@ -39,6 +39,8 @@ data class HomeUiState(
     val tripCode: String? = null,
     val displayName: String = "",
 
-    val tripMembers: List<String> = emptyList() // UI-only for now
+    val tripMembers: List<com.example.karwaan.data.remote.supabase.Member> = emptyList(),
+    val tripId: String? = null,
+    val userId: String? = null
 )
 
