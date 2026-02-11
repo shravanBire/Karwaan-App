@@ -13,7 +13,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.example.karwaan.data.remote.supabase.Member
+import com.example.karwaan.data.model.Member
 
 @Composable
 fun TripInfoCard(

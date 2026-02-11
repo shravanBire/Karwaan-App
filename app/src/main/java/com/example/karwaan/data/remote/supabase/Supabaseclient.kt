@@ -10,8 +10,8 @@ import kotlinx.serialization.json.Json
 object SupabaseProvider {
     val client: SupabaseClient by lazy {
         createSupabaseClient(
-            supabaseUrl = "https://ryeqemimspkgxhlzvaay.supabase.co",
-            supabaseKey = "sb_publishable_FKLnd95FRcOd0doozu6Vyw_uSeoGVVq"
+            supabaseUrl = "https://lkngpowyjccaehhurqts.supabase.co",
+            supabaseKey = "sb_publishable_ayOGe8IoaGB96MAFam-KYQ_WjXoFUpa"
         ) {
             install(Postgrest)
             install(Realtime)

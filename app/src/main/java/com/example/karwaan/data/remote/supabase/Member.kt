@@ -1,4 +1,4 @@
-package com.example.karwaan.data.remote.supabase
+package com.example.karwaan.data.model
 
 import kotlinx.serialization.Serializable
 

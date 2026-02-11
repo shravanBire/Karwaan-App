@@ -16,7 +16,8 @@ import kotlinx.coroutines.delay
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import android.provider.Settings
-import android.util.Log
+import com.example.karwaan.data.model.Member
+import com.example.karwaan.data.remote.supabase.RealtimeManager
 import com.example.karwaan.utils.UserLocation
 import java.util.UUID
 
@@ -34,9 +35,10 @@ class HomeViewModel(
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState
 
-    private val repo = com.example.karwaan.data.remote.supabase.TripRepository()
-    private val realtime = com.example.karwaan.data.remote.supabase.RealtimeManager()
-    private var realtimeJob: kotlinx.coroutines.Job? = null
+    private val repo = TripRepository()
+    private val realtime = RealtimeManager()
+    private var realtimeJob: Job? = null
+
     private var lastSentLocation: UserLocation? = null
 
 
@@ -74,6 +76,7 @@ class HomeViewModel(
 
             HomeEvent.OnCreateTrip -> {
                 viewModelScope.launch {
+
                     try {
                         val trip = repo.createTrip(
                             hostId = deviceId,
@@ -91,11 +94,40 @@ class HomeViewModel(
                                 userId = deviceId
                             )
                         }
+                        _uiState.value.userLocation?.let { loc ->
+                            viewModelScope.launch {
+                                tripRepository.updateLocation(
+                                    tripId = trip.id,
+                                    userId = deviceId,
+                                    lat = loc.latitude,
+                                    lng = loc.longitude
+                                )
+                                lastSentLocation = loc
+                            }
+                        }
+                        _uiState.update {
+                            it.copy(
+                                tripMembers = listOf(
+                                    Member(
+                                        id = "dummy",
+                                        trip_id = trip.id,
+                                        user_id = "dummy_user",
+                                        display_name = "TEST",
+                                        marker_color = "#FF0000",
+                                        latitude = 20.9391635,
+                                        longitude = 79.0105571,
+                                        is_active = true
+                                    )
+                                )
+                            )
+                        }
+
                     } catch (e: Exception) {
                         e.printStackTrace()
                     }
                 }
             }
+
 
 
 
@@ -120,11 +152,23 @@ class HomeViewModel(
                                 userId = deviceId
                             )
                         }
+                        _uiState.value.userLocation?.let { loc ->
+                            viewModelScope.launch {
+                                tripRepository.updateLocation(
+                                    tripId = trip.id,
+                                    userId = deviceId,
+                                    lat = loc.latitude,
+                                    lng = loc.longitude
+                                )
+                                lastSentLocation = loc
+                            }
+                        }
                     } catch (e: Exception) {
                         e.printStackTrace()
                     }
                 }
             }
+
 
 
 
@@ -146,13 +190,17 @@ class HomeViewModel(
             is HomeEvent.OnUserLocationUpdated -> {
                 val location = event.location
 
+                // Always update UI (blue dot, camera logic, etc.)
                 _uiState.update {
                     it.copy(userLocation = location)
                 }
 
                 val state = _uiState.value
+
+                // Only sync to Supabase if user is in an active group trip
                 if (!state.isInGroupTrip || state.tripId == null) return
 
+                // 🔥 Distance-based throttling
                 val last = lastSentLocation
                 if (last != null) {
                     val results = FloatArray(1)
@@ -163,11 +211,14 @@ class HomeViewModel(
                         location.longitude,
                         results
                     )
+
+                    // Ignore very small movements (< 2 meters)
                     if (results[0] < 2f) return
                 }
 
                 lastSentLocation = location
 
+                // Push update to Supabase
                 viewModelScope.launch {
                     try {
                         tripRepository.updateLocation(
@@ -181,6 +232,7 @@ class HomeViewModel(
                     }
                 }
             }
+
 
 
 
@@ -530,15 +582,28 @@ class HomeViewModel(
         realtimeJob?.cancel()
 
         realtimeJob = viewModelScope.launch {
-            realtime.observeMembers(tripId)
-                .collect { members ->
-                    Log.d("Realtime", "Received ${members.size} members")
+            realtime.observeMembers(tripId).collect {
+                try {
+                    val members =
+                        SupabaseProvider.client
+                            .from("members")
+                            .select {
+                                filter {
+                                    eq("trip_id", tripId)
+                                }
+                            }
+                            .decodeList<com.example.karwaan.data.model.Member>()
+
                     _uiState.update {
                         it.copy(tripMembers = members)
                     }
+
+                } catch (e: Exception) {
+                    e.printStackTrace()
                 }
+            }
         }
     }
-    }
-}
 
+
+}

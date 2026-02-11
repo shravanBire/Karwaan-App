@@ -1,5 +1,6 @@
 package com.example.karwaan.screens.Home
 
+import com.example.karwaan.data.model.Member
 import com.example.karwaan.utils.SearchResult
 import com.example.karwaan.utils.UserLocation
 
@@ -39,7 +40,7 @@ data class HomeUiState(
     val tripCode: String? = null,
     val displayName: String = "",
 
-    val tripMembers: List<com.example.karwaan.data.remote.supabase.Member> = emptyList(),
+    val tripMembers: List<Member> = emptyList(),
     val tripId: String? = null,
     val userId: String? = null
 )
