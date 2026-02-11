@@ -56,6 +56,8 @@ fun MapViewContainer(
     val mapView = remember { MapView(context) }
     var map by remember { mutableStateOf<MapLibreMap?>(null) }
     var animatedRoutePoints by remember { mutableStateOf<List<Pair<Double, Double>>>(emptyList()) }
+    var styleReady by remember { mutableStateOf(false) }
+
 
     AndroidView(
         modifier = modifier,
@@ -68,12 +70,31 @@ fun MapViewContainer(
                         Style.Builder()
                             .fromUri("https://tiles.openfreemap.org/styles/liberty")
                     ) { style ->
-
+                        styleReady = true
                         style.addImage(
                             MEMBER_ICON_ID,
-                            context.getDrawable(
-                                org.maplibre.android.R.drawable.maplibre_marker_icon_default
-                            )!!
+                            context.getDrawable(R.drawable.user_location_dot)!!
+                        )
+
+                        style.addSource(
+                            GeoJsonSource(
+                                MEMBERS_SOURCE_ID,
+                                FeatureCollection.fromFeatures(emptyArray())
+                            )
+                        )
+
+                        style.addLayer(
+                            SymbolLayer(MEMBERS_LAYER_ID, MEMBERS_SOURCE_ID)
+                                .withProperties(
+                                    iconImage(MEMBER_ICON_ID),
+                                    iconSize(1.2f),
+                                    textField(get("name")),
+                                    textSize(12f),
+                                    textOffset(arrayOf(0f, 1.4f)),
+                                    textColor("#000000"),
+                                    textAllowOverlap(true),
+                                    iconAllowOverlap(true)
+                                )
                         )
 
                         style.addImage(
@@ -104,15 +125,17 @@ fun MapViewContainer(
         }
     }
 
-    LaunchedEffect(map,tripMembers) {
-        map?.let { m ->
-            updateMembersOnMap(
-                map = m,
-                members = tripMembers,
-                currentUserId = currentUserId
-            )
-        }
+    LaunchedEffect(map, styleReady, tripMembers) {
+        if (!styleReady) return@LaunchedEffect
+        val m = map ?: return@LaunchedEffect
+
+        updateMembersOnMap(
+            map = m,
+            members = tripMembers,
+            currentUserId = currentUserId
+        )
     }
+
 
     LaunchedEffect(searchedLocation) {
         searchedLocation?.let {
@@ -294,51 +317,62 @@ private fun updateMembersOnMap(
     members: List<Member>,
     currentUserId: String?
 ) {
-    val style = map.style ?: return
+    val style = map.style ?: run {
+        Log.d("MAP_DEBUG", "Style is null")
+        return
+    }
 
-    val features = members
-        .filter {
-            it.user_id != currentUserId &&
-                    it.latitude != null &&
-                    it.longitude != null
+    Log.d("MAP_DEBUG", "Members received: ${members.size}")
+
+    val validMembers = members.filter {
+        it.user_id != currentUserId &&
+                it.latitude != null &&
+                it.longitude != null
+    }
+
+    Log.d("MAP_DEBUG", "Valid members after filter: ${validMembers.size}")
+
+    validMembers.forEach {
+        Log.d(
+            "MAP_DEBUG",
+            "Member -> ${it.display_name} (${it.latitude}, ${it.longitude})"
+        )
+    }
+
+    val features = validMembers.map { member ->
+        Feature.fromGeometry(
+            Point.fromLngLat(member.longitude!!, member.latitude!!)
+        ).apply {
+            addStringProperty("name", member.display_name)
         }
-        .map { member ->
-            Feature.fromGeometry(
-                Point.fromLngLat(member.longitude!!, member.latitude!!)
-            ).apply {
-                addStringProperty("name", member.display_name)
-                addStringProperty("color", member.marker_color)
-            }
-        }
+    }
 
     val source = style.getSourceAs<GeoJsonSource>(MEMBERS_SOURCE_ID)
 
     if (source == null) {
-        style.addSource(
-            GeoJsonSource(
-                MEMBERS_SOURCE_ID,
-                FeatureCollection.fromFeatures(features)
-            )
-        )
-        val layer = SymbolLayer(MEMBERS_LAYER_ID, MEMBERS_SOURCE_ID)
-            .withProperties(
-                iconImage(MEMBER_ICON_ID),
-                iconSize(1.2f),
-                textField(get("name")),
-                textSize(12f),
-                textOffset(arrayOf(0f, 1.4f)),
-                textColor("#000000"),
-                textAllowOverlap(true),
-                iconAllowOverlap(true)
-            )
-
-        if (style.getLayer(USER_LOCATION_LAYER_ID) != null) {
-            style.addLayerAbove(layer, USER_LOCATION_LAYER_ID)
-        } else {
-            style.addLayer(layer)
-        }
-    } else {
-        source.setGeoJson(FeatureCollection.fromFeatures(features))
+        Log.d("MAP_DEBUG", "Members source NOT found    ")
+        return
     }
-    Log.d("MAP_DEBUG", "Members received: ${members.size}")
+
+    Log.d("MAP_DEBUG", "Updating GeoJson with ${features.size} features")
+
+    source.setGeoJson(FeatureCollection.fromFeatures(features))
+
+    if (features.isNotEmpty()) {
+        val point = features.first().geometry() as Point
+        map.animateCamera(
+            CameraUpdateFactory.newLatLngZoom(
+                LatLng(point.latitude(), point.longitude()),
+                16.0
+            ),
+            1000
+        )
+    }
+
+    Log.d("MAP_DEBUG", "Camera center: ${map.cameraPosition.target}")
+
+
+    // Extra diagnostics
+    Log.d("MAP_DEBUG", "Layer exists: ${style.getLayer(MEMBERS_LAYER_ID) != null}")
+    Log.d("MAP_DEBUG", "Image exists: ${style.getImage(MEMBER_ICON_ID) != null}")
 }

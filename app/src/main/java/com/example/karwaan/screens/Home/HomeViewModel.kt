@@ -83,7 +83,7 @@ class HomeViewModel(
                             displayName = _uiState.value.displayName.ifBlank { "You" }
                         )
 
-                        subscribeRealtime(trip.id)
+                        //subscribeRealtime(trip.id)
 
                         _uiState.update {
                             it.copy(
@@ -114,8 +114,8 @@ class HomeViewModel(
                                         user_id = "dummy_user",
                                         display_name = "TEST",
                                         marker_color = "#FF0000",
-                                        latitude = 20.9391635,
-                                        longitude = 79.0105571,
+                                        latitude = 20.9292083,
+                                        longitude = 79.00458,
                                         is_active = true
                                     )
                                 )
