@@ -12,6 +12,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.example.karwaan.data.model.Member
 
@@ -34,7 +35,8 @@ fun TripInfoCard(
             members.forEach { member ->
                 Text(
                     text = "• ${member.display_name}",
-                    style = MaterialTheme.typography.bodyMedium
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color(android.graphics.Color.parseColor(member.marker_color))
                 )
             }
 
