@@ -113,9 +113,7 @@ Contributions are welcome! Please follow these steps:
 
 Made with ❤️ by Shravan Bire (https://github.com/shravanBire) & Prince Jain (https://github.com/realprincejn)
 
-================================================================================
-                              SQL SCHEMA SETUP
-================================================================================
+##SQL SCHEMA SETUP
 
 -- Create pgcrypto extension for UUID generation
 create extension if not exists "pgcrypto";
@@ -162,10 +160,7 @@ for all using (true);
 alter table public.trips enable row level security;
 alter table public.members enable row level security;
 
-================================================================================
-                            DATABASE SCHEMA DETAILS
-================================================================================
-
+##DATABASE SCHEMA DETAILS
 TABLE: trips
 ================================================================================
 Column Name    | Type       | Constraints/Default
