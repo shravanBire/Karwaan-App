@@ -2,44 +2,63 @@
 
 A group navigation and convoy travel app built with **Kotlin** and **Jetpack Compose**. Karwaan enables coordinated travel between multiple users with real-time location tracking and trip management.
 
+---
+
 ## Features
 
-- 📍 **Real-time Location Tracking** - Track all members of your convoy in real-time
-- 🚀 **Group Navigation** - Organize and manage group trips effortlessly
-- 🎨 **Member Markers** - Each member has a unique colored marker on the map
-- 💬 **Trip Management** - Create, join, and manage trips with unique trip codes
-- 📱 **Modern UI** - Built with Jetpack Compose for a smooth and responsive experience
-- 🔄 **Real-time Updates** - Powered by Supabase for instant synchronization across all members
+- 📍 **Real-time Location Tracking** — Track all members of your convoy in real-time
+- 🚀 **Group Navigation** — Organize and manage group trips effortlessly
+- 🎨 **Member Markers** — Each member has a unique colored marker on the map
+- 💬 **Trip Management** — Create, join, and manage trips with unique trip codes
+- 📱 **Modern UI** — Built with Jetpack Compose for a smooth and responsive experience
+- 🔄 **Real-time Updates** — Powered by Supabase for instant synchronization across all members
+
+---
 
 ## Tech Stack
 
-- **Language**: Kotlin
-- **UI Framework**: Jetpack Compose
-- **Backend**: Supabase (PostgreSQL)
-- **Real-time**: PostgreSQL Real-time Subscriptions
-- **Build Tool**: Gradle
+| Layer       | Technology                        |
+|-------------|-----------------------------------|
+| Language    | Kotlin                            |
+| UI          | Jetpack Compose                   |
+| Backend     | Supabase (PostgreSQL)             |
+| Real-time   | PostgreSQL Real-time Subscriptions|
+| Build Tool  | Gradle                            |
+
+---
 
 ## Architecture
 
 ### Database Schema
 
-**Trips Table**
-- id (UUID, Primary Key)
-- trip_code (Unique Integer) - Join code for the trip
-- host_id (UUID) - Creator of the trip
-- is_active (Boolean) - Trip status
-- created_at (Timestamp) - Creation time
-- ended_at (Timestamp) - Trip end time
+#### Trips Table
 
-**Members Table**
-- id (UUID, Primary Key)
-- trip_id (UUID) - Reference to trips table
-- user_id (UUID) - User identifier
-- display_name (VARCHAR) - Member's display name
-- marker_color (VARCHAR) - Hex color for map marker
-- latitude/longitude (Double) - Current location
-- last_updated (Timestamp) - Last location update
-- is_active (Boolean) - Member status
+| Column       | Type        | Description                        |
+|--------------|-------------|------------------------------------|
+| `id`         | UUID (PK)   | Auto-generated primary key         |
+| `trip_code`  | Integer     | Unique join code for the trip      |
+| `host_id`    | UUID        | Creator of the trip                |
+| `is_active`  | Boolean     | Trip status (default: `true`)      |
+| `created_at` | Timestamp   | Creation time                      |
+| `ended_at`   | Timestamp   | Trip end time (nullable)           |
+
+#### Members Table
+
+| Column         | Type          | Description                              |
+|----------------|---------------|------------------------------------------|
+| `id`           | UUID (PK)     | Auto-generated primary key               |
+| `trip_id`      | UUID (FK)     | Reference to trips table                 |
+| `user_id`      | UUID          | User identifier                          |
+| `display_name` | VARCHAR(10)   | Member's display name (max 10 chars)     |
+| `marker_color` | VARCHAR(7)    | Hex color for map marker (e.g. #FF5733)  |
+| `latitude`     | Double        | Current latitude                         |
+| `longitude`    | Double        | Current longitude                        |
+| `last_updated` | Timestamp     | Last location update                     |
+| `is_active`    | Boolean       | Member status (default: `true`)          |
+
+> **Constraint:** `UNIQUE(trip_id, user_id)` — ensures one user per trip.
+
+---
 
 ## Getting Started
 
@@ -51,37 +70,45 @@ A group navigation and convoy travel app built with **Kotlin** and **Jetpack Com
 
 ### Installation
 
-1. Clone the repository:
-   git clone https://github.com/shravanBire/Karwaan-App.git
-   cd Karwaan-App
+**1. Clone the repository:**
+```bash
+git clone https://github.com/shravanBire/Karwaan-App.git
+cd Karwaan-App
+```
 
-2. Open in Android Studio:
-   Android Studio will automatically detect the Gradle configuration
+**2. Open in Android Studio:**
 
-3. Build the project:
-   ./gradlew build
+Android Studio will automatically detect the Gradle configuration.
 
-4. Run the app:
-   ./gradlew installDebug
+**3. Build the project:**
+```bash
+./gradlew build
+```
+
+**4. Run the app:**
+```bash
+./gradlew installDebug
+```
 
 ### Environment Setup
 
-Configure your Supabase credentials:
-1. Create a project at https://supabase.com
-2. Run the provided SQL schema in your Supabase SQL editor
+1. Create a project at [supabase.com](https://supabase.com)
+2. Run the SQL schema (see below) in your Supabase SQL editor
 3. Add your Supabase URL and API key to your app's configuration
+
+---
 
 ## Usage
 
 ### Creating a Trip
 
 1. Launch the app
-2. Tap "Create Trip" to generate a new convoy
+2. Tap **"Create Trip"** to generate a new convoy
 3. Share the unique trip code with friends
 
 ### Joining a Trip
 
-1. Tap "Join Trip"
+1. Tap **"Join Trip"**
 2. Enter the trip code shared by the host
 3. Enter your display name and select a marker color
 4. Start sharing your location with the group
@@ -90,381 +117,199 @@ Configure your Supabase credentials:
 
 - Map displays all active members with their selected marker colors
 - Member positions update in real-time as they move
-- View member details by tapping their marker
+- Tap a marker to view member details
+
+---
 
 ## Project Structure
 
+```
 Karwaan-App/
-├── app/                 # Main application module
-├── build.gradle.kts     # Root build configuration
-├── gradle/              # Gradle wrapper files
-├── gradle.properties    # Gradle properties
-└── settings.gradle.kts  # Gradle settings
-
-## Contributing
-
-Contributions are welcome! Please follow these steps:
-
-1. Fork the repository
-2. Create a feature branch (git checkout -b feature/amazing-feature)
-3. Commit your changes (git commit -m 'Add amazing feature')
-4. Push to the branch (git push origin feature/amazing-feature)
-5. Open a Pull Request
-
-Made with ❤️ by Shravan Bire (https://github.com/shravanBire) & Prince Jain (https://github.com/realprincejn)
-
-##SQL SCHEMA SETUP
-
--- Create pgcrypto extension for UUID generation
-create extension if not exists "pgcrypto";
-
--- Create trips table
--- Stores information about group trips/convoys
-create table public.trips (
-  id uuid default gen_random_uuid() primary key,
-  trip_code int not null unique,
-  host_id uuid not null,
-  is_active boolean default true,
-  created_at timestamptz default now(),
-  ended_at timestamptz
-);
-
--- Create members table
--- Stores information about trip participants and their locations
-create table public.members (
-  id uuid default gen_random_uuid() primary key,
-  trip_id uuid references public.trips(id) on delete cascade,
-  user_id uuid not null,
-  display_name varchar(10) not null,
-  marker_color varchar(7) not null,
-  latitude double precision,
-  longitude double precision,
-  last_updated timestamptz default now(),
-  is_active boolean default true,
-  unique(trip_id, user_id)
-);
-
--- Enable real-time subscriptions for both tables
-alter publication supabase_realtime add table public.members;
-alter publication supabase_realtime add table public.trips;
-
--- Create public access policies for trips table
-create policy "Public access" on public.trips
-for all using (true);
-
--- Create public access policies for members table
-create policy "Public access" on public.members
-for all using (true);
-
--- Enable Row Level Security on both tables
-alter table public.trips enable row level security;
-alter table public.members enable row level security;
-
-##DATABASE SCHEMA DETAILS
-TABLE: trips
-================================================================================
-Column Name    | Type       | Constraints/Default
-===============|============|==================================================
-id             | uuid       | PRIMARY KEY, DEFAULT gen_random_uuid()
-trip_code      | int        | NOT NULL, UNIQUE
-host_id        | uuid       | NOT NULL (User who created the trip)
-is_active      | boolean    | DEFAULT true
-created_at     | timestamptz| DEFAULT now()
-ended_at       | timestamptz| NULL (Optional, set when trip ends)
-
-DESCRIPTION:
-The trips table stores information about each convoy/group trip. Each trip has
-a unique trip_code that members use to join. The host_id identifies who created
-the trip. The is_active flag indicates whether the trip is ongoing. Timestamps
-track when the trip was created and ended.
-
-TABLE: members
-================================================================================
-Column Name    | Type               | Constraints/Default
-===============|====================|==================================================
-id             | uuid               | PRIMARY KEY, DEFAULT gen_random_uuid()
-trip_id        | uuid               | FOREIGN KEY -> trips(id) ON DELETE CASCADE
-user_id        | uuid               | NOT NULL (Reference to user)
-display_name   | varchar(10)        | NOT NULL (Max 10 characters)
-marker_color   | varchar(7)         | NOT NULL (Hex color code, e.g., #FF5733)
-latitude       | double precision   | NULL (Current latitude)
-longitude      | double precision   | NULL (Current longitude)
-last_updated   | timestamptz        | DEFAULT now()
-is_active      | boolean            | DEFAULT true
-UNIQUE         | (trip_id, user_id) | Ensures one user per trip
-
-DESCRIPTION:
-The members table stores information about users participating in trips. It
-tracks their current location (latitude/longitude), display name shown on maps,
-and a unique marker color. The last_updated timestamp records when their
-location was last refreshed. The composite unique constraint ensures a user
-can only be in a trip once.
-
-RELATIONSHIPS:
-- members.trip_id → trips.id (CASCADE DELETE)
-  When a trip is deleted, all associated members are automatically deleted.
-
-REAL-TIME FEATURES:
-Both tables are added to the Supabase real-time publication, enabling:
-- Live location updates as members move
-- Instant trip status changes
-- Automatic synchronization across all clients
-
-ROW LEVEL SECURITY (RLS):
-Both tables have RLS enabled with a simple "Public access" policy:
-- All users can SELECT, INSERT, UPDATE, DELETE on both tables
-- This is suitable for a public trip-sharing application
-- Consider implementing more restrictive policies in production
-
-================================================================================
-                         SUPABASE INTEGRATION NOTES
-================================================================================
-
-1. REAL-TIME SUBSCRIPTIONS:
-   - Members can subscribe to real-time updates on the members table
-   - Updates to latitude/longitude trigger instant notifications to other users
-   - Trip status changes are instantly reflected across the app
-
-2. CASCADE DELETE:
-   - When a trip is deleted, all associated members are automatically deleted
-   - This maintains referential integrity and keeps the database clean
-
-3. ROW LEVEL SECURITY:
-   - Current policy allows public access
-   - For production, implement user-based policies:
-     * Users can only modify their own member records
-     * Users can only read trips they're part of
-     * Hosts can delete trips they created
-
-4. RECOMMENDED PRODUCTION POLICIES:
-   - Implement user_id validation
-   - Add trip access control
-   - Restrict location updates to prevent spoofing
-   - Add audit logging for security-sensitive operations
-
-================================================================================
-                            PROJECT STRUCTURE
-================================================================================
-
-Karwaan-App/
-│
 ├── .idea/                      # Android Studio configuration
 ├── .gitignore                  # Git ignore rules
 ├── app/                        # Main application module
-│   ├── src/                    # Source code
-│   │   ├── main/               # Main source set
+│   ├── src/
+│   │   ├── main/
 │   │   │   ├── kotlin/         # Kotlin source files
-│   │   │   ├── res/            # Android resources (layouts, drawables, etc.)
+│   │   │   ├── res/            # Android resources
 │   │   │   └── AndroidManifest.xml
 │   │   ├── test/               # Unit tests
 │   │   └── androidTest/        # Instrumented tests
-│   ├── build.gradle.kts        # App-level build configuration
+│   ├── build.gradle.kts        # App-level build config
 │   └── proguard-rules.pro      # ProGuard/R8 rules
-│
-├── gradle/                     # Gradle wrapper distribution
+├── gradle/
 │   └── wrapper/
 │       ├── gradle-wrapper.jar
 │       └── gradle-wrapper.properties
-│
 ├── build.gradle.kts            # Root build configuration
-├── gradle.properties           # Gradle properties and versions
-├── gradle.properties.kts       # Kotlin Gradle properties (if applicable)
+├── gradle.properties           # Gradle properties
 ├── settings.gradle.kts         # Gradle settings
-├── gradlew                     # Gradle wrapper script (macOS/Linux)
-├── gradlew.bat                 # Gradle wrapper script (Windows)
-│
+├── gradlew                     # Gradle wrapper (macOS/Linux)
+├── gradlew.bat                 # Gradle wrapper (Windows)
 └── README.md                   # Project documentation
+```
 
-================================================================================
-                          BUILD CONFIGURATION FILES
-================================================================================
+---
 
-FILE: build.gradle.kts (Root)
-Description: Root-level Gradle configuration for the entire project.
-Contains plugin declarations, shared dependencies, and build settings.
+## SQL Schema Setup
 
-FILE: app/build.gradle.kts
-Description: Module-level Gradle configuration for the app.
-Defines:
-- compileSdk and targetSdk versions
-- App-specific dependencies (Jetpack Compose, Kotlin, etc.)
-- Signing configurations
-- Build variants (debug/release)
+```sql
+-- Enable UUID generation
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
-FILE: gradle.properties
-Description: Gradle system properties and version declarations.
-Contains:
-- org.gradle.jvmargs (JVM arguments)
-- org.gradle.configureondemand (build optimization)
-- Dependency versions
-- Build tool versions
+-- Trips table
+CREATE TABLE public.trips (
+  id          UUID        DEFAULT gen_random_uuid() PRIMARY KEY,
+  trip_code   INT         NOT NULL UNIQUE,
+  host_id     UUID        NOT NULL,
+  is_active   BOOLEAN     DEFAULT true,
+  created_at  TIMESTAMPTZ DEFAULT now(),
+  ended_at    TIMESTAMPTZ
+);
 
-FILE: settings.gradle.kts
-Description: Gradle settings file that defines project structure.
-Includes module paths and plugin management.
+-- Members table
+CREATE TABLE public.members (
+  id            UUID        DEFAULT gen_random_uuid() PRIMARY KEY,
+  trip_id       UUID        REFERENCES public.trips(id) ON DELETE CASCADE,
+  user_id       UUID        NOT NULL,
+  display_name  VARCHAR(10) NOT NULL,
+  marker_color  VARCHAR(7)  NOT NULL,
+  latitude      DOUBLE PRECISION,
+  longitude     DOUBLE PRECISION,
+  last_updated  TIMESTAMPTZ DEFAULT now(),
+  is_active     BOOLEAN     DEFAULT true,
+  UNIQUE(trip_id, user_id)
+);
 
-FILE: gradlew and gradlew.bat
-Description: Gradle wrapper scripts for Linux/macOS and Windows.
-Automatically downloads and runs the correct Gradle version.
+-- Enable real-time
+ALTER PUBLICATION supabase_realtime ADD TABLE public.members;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.trips;
 
-================================================================================
-                            GETTING STARTED GUIDE
-================================================================================
+-- Row Level Security
+ALTER TABLE public.trips   ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.members ENABLE ROW LEVEL SECURITY;
 
-STEP 1: CLONE THE REPOSITORY
-$ git clone https://github.com/shravanBire/Karwaan-App.git
-$ cd Karwaan-App
+-- Public access policies (suitable for development)
+CREATE POLICY "Public access" ON public.trips   FOR ALL USING (true);
+CREATE POLICY "Public access" ON public.members FOR ALL USING (true);
+```
 
-STEP 2: OPEN IN ANDROID STUDIO
-- Open Android Studio
-- File > Open
-- Select the Karwaan-App folder
-- Wait for Gradle sync to complete
+---
 
-STEP 3: SETUP SUPABASE
-1. Go to https://supabase.com and create a new project
-2. Copy your Supabase URL and API key
-3. In the Supabase SQL editor, run the SQL schema provided above
-4. Add your credentials to your app's configuration
+## Supabase Integration Notes
 
-STEP 4: BUILD THE PROJECT
-$ ./gradlew build
+### Real-time Subscriptions
+- Members subscribe to live updates on the `members` table
+- Location changes trigger instant notifications to other users
+- Trip status changes sync across all clients immediately
 
-STEP 5: RUN ON EMULATOR OR DEVICE
-$ ./gradlew installDebug
+### Cascade Delete
+- Deleting a trip automatically removes all associated members
+- Maintains referential integrity without manual cleanup
 
-Or from Android Studio:
-- Connect an Android device or start an emulator
-- Click "Run" button (Shift + F10)
+### Row Level Security (RLS)
+- Current policy allows public access (suitable for testing)
+- **For production**, implement user-based policies:
+  - Users can only modify their own member records
+  - Users can only read trips they belong to
+  - Hosts can delete trips they created
 
-STEP 6: TEST THE APP
-1. Create a trip on one device
-2. Share the trip code with another device
-3. Join the trip with the second device
-4. See real-time location updates
+---
 
-================================================================================
-                          FEATURE IMPLEMENTATION NOTES
-================================================================================
+## Security Considerations
 
-REAL-TIME LOCATION TRACKING:
-- Uses Supabase real-time subscriptions on the members table
-- Location updates trigger instant changes on all connected clients
-- Latitude and longitude are updated in the members table
+| Area              | Current State         | Production Recommendation                   |
+|-------------------|-----------------------|---------------------------------------------|
+| Authentication    | None                  | Implement Supabase Auth                     |
+| RLS Policies      | Public access         | Restrict by user_id and trip membership     |
+| Location Updates  | Unrestricted          | Add rate limiting and range validation      |
+| Input Validation  | Minimal               | Validate trip codes, names, coordinates     |
+| Audit Logging     | None                  | Log sensitive operations                    |
 
-TRIP MANAGEMENT:
-- Trips are created with a unique trip_code for easy sharing
-- Trip hosts are stored in host_id for future permission management
-- is_active flag allows trips to be marked as completed without deletion
+---
 
-MEMBER MARKERS:
-- Each member selects a marker_color (hex code like #FF5733)
-- Display names are limited to 10 characters for UI consistency
-- Colors are used to visually distinguish members on the map
+## Future Enhancements
 
-CONVOY COORDINATION:
-- Members can see all other active members in the same trip
-- Real-time updates ensure everyone sees the current positions
-- last_updated timestamp helps identify stale location data
+### 🗺️ Advanced Navigation
+- Route planning for the entire convoy
+- Stop suggestions along the route
+- Estimated arrival time calculations
 
-================================================================================
-                            SECURITY CONSIDERATIONS
-================================================================================
+### 💬 Communication
+- In-app group chat
+- Voice/video call integration
+- Emergency alerts and messaging
 
-CURRENT STATE:
-- Public access policies enabled for easy testing
-- No user authentication restrictions
+### 📊 Trip Analytics
+- Distance traveled tracking
+- Average speed monitoring
+- Trip statistics and reports
 
-PRODUCTION RECOMMENDATIONS:
-1. Implement authentication with Supabase Auth
-2. Update RLS policies to restrict access:
-   - Users can only update their own member records
-   - Users can only view trips they belong to
-   - Hosts can manage trip settings
-3. Add rate limiting for location updates
-4. Implement input validation:
-   - Validate trip_code format
-   - Validate display_name and marker_color
-   - Validate latitude/longitude ranges
-5. Add audit logging for sensitive operations
-6. Consider implementing trip expiration
-7. Add reporting mechanism for inappropriate markers/names
+### 👤 Social Features
+- Trip history and past convoys
+- User profiles and ratings
+- Recurring trip support
 
-================================================================================
-                        FUTURE ENHANCEMENT IDEAS
-================================================================================
+### 🛡️ Safety Features
+- SOS emergency button
+- Geofencing for trip boundaries
+- Driver behavior monitoring
 
-1. ADVANCED NAVIGATION:
-   - Route planning for the entire convoy
-   - Stop suggestions along the route
-   - Estimated arrival time calculations
+### ⚡ Performance
+- Battery optimization for continuous tracking
+- Data usage reduction
+- Offline mode with background sync
 
-2. COMMUNICATION:
-   - In-app chat for group members
-   - Voice/video call integration
-   - Emergency alerts and messaging
+---
 
-3. TRIP ANALYTICS:
-   - Distance traveled tracking
-   - Average speed monitoring
-   - Trip statistics and reports
+## Troubleshooting
 
-4. SOCIAL FEATURES:
-   - Trip history and past convoys
-   - User profiles and ratings
-   - Create recurring trips
+### Build Issues
 
-5. SAFETY FEATURES:
-   - SOS button for emergencies
-   - Geofencing for trip boundaries
-   - Driver behavior monitoring
+| Problem                  | Solution                                                               |
+|--------------------------|------------------------------------------------------------------------|
+| Gradle sync fails        | File → Invalidate Caches → Restart; delete `.gradle` and `.idea`      |
+| Missing dependencies     | Check internet connection; run `./gradlew --refresh-dependencies`      |
 
-6. PERFORMANCE:
-   - Battery optimization for continuous tracking
-   - Data usage optimization
-   - Offline mode with sync when online
+### Runtime Issues
 
-================================================================================
-                              TROUBLESHOOTING
-================================================================================
+| Problem                       | Solution                                                          |
+|-------------------------------|-------------------------------------------------------------------|
+| App crashes on launch         | Verify Supabase credentials and database schema                   |
+| Real-time updates not working | Check Supabase connection and real-time publication settings      |
+| Location permissions denied   | Grant runtime permissions; ensure device location is enabled      |
 
-BUILD ISSUES:
-- Gradle sync fails: 
-  * File > Invalidate Caches > Restart
-  * Delete .gradle and .idea folders
-  * Re-open the project
+---
 
-- Missing dependencies:
-  * Check internet connection
-  * Verify gradle.properties versions
-  * Run: ./gradlew --refresh-dependencies
+## Contributing
 
-RUNTIME ISSUES:
-- App crashes on launch:
-  * Check Supabase credentials
-  * Ensure database schema is set up
-  * Check AndroidManifest.xml permissions
+Contributions are welcome! Follow these steps:
 
-- Real-time updates not working:
-  * Verify Supabase connection
-  * Check internet connectivity
-  * Ensure real-time publication is enabled in Supabase
+1. Fork the repository
+2. Create a feature branch:
+   ```bash
+   git checkout -b feature/amazing-feature
+   ```
+3. Commit your changes:
+   ```bash
+   git commit -m "Add amazing feature"
+   ```
+4. Push to the branch:
+   ```bash
+   git push origin feature/amazing-feature
+   ```
+5. Open a Pull Request
 
-LOCATION TRACKING:
-- Permissions not granted:
-  * Check Android permissions in AndroidManifest.xml
-  * Request runtime permissions for location
-  * Verify device location services are enabled
+---
 
-================================================================================
-                            CONTACT & SUPPORT
-================================================================================
+## Contact & Support
 
-Project Owner: shravanBire
-GitHub Profiles: https://github.com/shravanBire,https://github.com/realprincejn
-Repository: https://github.com/shravanBire/Karwaan-App
+| | |
+|---|---|
+| **Project Owners** | [shravanBire](https://github.com/shravanBire) & [realprincejn](https://github.com/realprincejn) |
+| **Repository** | [github.com/shravanBire/Karwaan-App](https://github.com/shravanBire/Karwaan-App) |
+| **Issues** | [Open an issue](https://github.com/shravanBire/Karwaan-App/issues) |
 
-For Issues or Feature Requests:
-- Open an issue on GitHub: https://github.com/shravanBire/Karwaan-App/issues
-- Include details about your problem or feature request
-- Provide steps to reproduce for bugs
+---
+
+*Made with ❤️ by Shravan Bire & Prince Jain*
