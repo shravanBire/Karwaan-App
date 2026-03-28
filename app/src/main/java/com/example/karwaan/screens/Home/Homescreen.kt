@@ -238,7 +238,9 @@ fun HomeScreen(
             )
 
 
-        } else {
+        }else {
+            val isRouteDisplayed = state.routePoints.isNotEmpty()
+
             Row(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
@@ -246,8 +248,7 @@ fun HomeScreen(
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-
-                // 🔵 RECENTER (same functionality as before)
+                // 🔵 RECENTER
                 FloatingActionButton(
                     onClick = {
                         if (LocationPermissionHelper.hasLocationPermission(context)) {
@@ -266,13 +267,15 @@ fun HomeScreen(
                     )
                 }
 
-                // 🧭 DIRECTIONS
-                Button(
-                    onClick = {
-                        viewModel.onEvent(HomeEvent.OnDirectionsClicked)
+                // 🧭 DIRECTIONS (hide once route is displayed)
+                if (!isRouteDisplayed) {
+                    Button(
+                        onClick = {
+                            viewModel.onEvent(HomeEvent.OnDirectionsClicked)
+                        }
+                    ) {
+                        Text("Directions")
                     }
-                ) {
-                    Text("Directions")
                 }
             }
         }
